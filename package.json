@@ -1,0 +1,16 @@
+{
+  "name": "dossier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prepare job applications on one local page with your own AI Agent.",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2"
+  }
+}

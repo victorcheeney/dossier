@@ -1,0 +1,78 @@
+<template>
+  <link rel="stylesheet" href="assets/dossier/dossier.css">
+  <style>
+    #root { position: absolute; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #0a0a0a; }
+    #ec-name { font: 400 164px/1 'Dossier Serif', serif; letter-spacing: -0.02em; }
+    #ec-name span { display: inline-block; }
+    #ec-i { position: relative; }
+    #ec-line { margin: 28px 0 42px; font: 400 34px/1.3 'Dossier Inter', Inter, sans-serif; letter-spacing: -0.01em; }
+    #ec-line span { display: inline-block; }
+    #ec-pill { padding: 14px 32px; border-radius: 999px; background: #171717; color: #fff; font: 500 24px/1.4 'Dossier Inter', Inter, sans-serif; }
+    /* The black the story faded to: a square centred on the i's dot, big enough to cover the screen, closing into the dot. */
+    #ec-black { position: absolute; z-index: 10; width: 8000px; height: 8000px; background: #0a0a0a; }
+  </style>
+  <div id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <h1 id="ec-name"><span class="ec-letter">D</span><span class="ec-letter">o</span><span class="ec-letter">s</span><span class="ec-letter">s</span><span id="ec-i"><span class="ec-letter" id="ec-i-letter">i</span><div id="ec-black"></div></span><span class="ec-letter">e</span><span class="ec-letter">r</span></h1>
+    <p id="ec-line"><span>Tailor</span> <span>every</span> <span>job</span> <span>application</span> <span>with</span> <span>your</span> <span>own</span> <span>AI.</span></p>
+    <span id="ec-pill">dossier.victorc.dev</span>
+  </div>
+  <script>
+    (() => {
+      const font = "400 164px 'Dossier Serif'";
+      const spacing = '-3.28px'; // -0.02em
+
+      // Where the i's dot sits inside its letter box: draw the i, find its ink's top piece (the dot) above the gap
+      // that separates it from the stem, and place it from the font's own metrics so no page layout is needed.
+      function dot() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 400;
+        const g = canvas.getContext('2d', { willReadFrequently: true });
+        g.font = font;
+        g.letterSpacing = spacing;
+        g.fillText('i', 100, 300);
+        const ink = g.getImageData(0, 0, canvas.width, canvas.height).data;
+        const rows = [];
+        for (let y = 0; y < canvas.height; y++) {
+          let [from, to] = [Infinity, -Infinity];
+          for (let x = 0; x < canvas.width; x++) if (ink[(y * canvas.width + x) * 4 + 3] > 128) [from, to] = [Math.min(from, x), Math.max(to, x)];
+          rows.push(from <= to ? [from, to] : null);
+        }
+        const top = rows.findIndex(Boolean);
+        let bottom = top;
+        while (rows[bottom + 1]) bottom++;
+        let stem = bottom + 1;
+        while (!rows[stem]) stem++;
+        const left = Math.min(...rows.slice(top, bottom + 1).map((r) => r[0]));
+        const right = Math.max(...rows.slice(top, bottom + 1).map((r) => r[1]));
+        const metrics = g.measureText('i');
+        const baseline = (164 - (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent)) / 2 + metrics.fontBoundingBoxAscent;
+        const toBox = (y) => y - 300 + baseline;
+        return { x: (left + right) / 2 - 100, y: toBox((top + bottom) / 2), r: (right - left + bottom - top + 2) / 4, gap: toBox((bottom + stem) / 2) };
+      }
+
+      function build() {
+        const d = dot();
+        const black = document.getElementById('ec-black');
+        // The i keeps its stem; the black circle becomes its dot.
+        document.getElementById('ec-i-letter').style.clipPath = `inset(${d.gap}px -20px -40px -20px)`;
+        black.style.left = `${d.x - 4000}px`;
+        black.style.top = `${d.y - 4000}px`;
+        const tl = gsap.timeline({ paused: true });
+        // The black closes into a circle that lands as the dot of the i.
+        tl.fromTo(black, { clipPath: 'circle(2300px at 4000px 4000px)' },
+          { clipPath: `circle(${d.r}px at 4000px 4000px)`, duration: 0.85, ease: 'expo.inOut' }, 0.15);
+        // The letters grow out from the dot, nearest first.
+        document.querySelectorAll('#ec-name .ec-letter').forEach((el, i) => {
+          tl.fromTo(el, { opacity: 0, y: 18, filter: 'blur(8px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: 'power3.out' }, 0.8 + Math.abs(i - 4) * 0.06);
+        });
+        tl.fromTo('#ec-line span', { opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0px)', duration: 0.18, stagger: 0.07, ease: 'power2.out' }, 1.35);
+        tl.fromTo('#ec-pill', { opacity: 0, y: 20, scale: 0.85 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'back.out(1.8)' }, 1.95);
+        tl.to({}, { duration: 0.01 }, 4.49);
+        window.__timelines['endcard'] = tl;
+      }
+
+      document.fonts.load(font).then(() => document.fonts.ready).then(build);
+    })();
+  </script>
+</template>

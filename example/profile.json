@@ -1,0 +1,8 @@
+[
+  { "name": "Career history", "file": "profile/career-history.md" },
+  { "name": "Accomplishments", "file": "profile/accomplishments.md" },
+  { "name": "Base résumé", "file": "profile/base-resume.html" },
+  { "name": "Voice", "file": "profile/voice.md" },
+  { "name": "Criteria", "file": "profile/criteria.md" },
+  { "name": "Stories", "file": "profile/stories.md" }
+]

@@ -1,0 +1,18 @@
+{
+  "company": "Acme",
+  "role": "Product Engineer",
+  "link": "https://jobs.example.com/acme/product-engineer",
+  "pay": "CA$230K–260K",
+  "location": "Remote, Canada",
+  "posting": "posting.md",
+  "fields": [
+    { "label": "Full name", "kind": "short_text", "required": true },
+    { "label": "Email", "kind": "short_text", "required": true },
+    { "label": "Résumé", "kind": "file", "required": true },
+    { "label": "LinkedIn or website", "kind": "short_text" },
+    { "label": "Are you in Canada?", "kind": "choice", "options": ["Yes", "No"] },
+    { "label": "Why Acme?", "kind": "long_text", "required": true },
+    { "label": "Tell us about something you shipped end to end. What did you own, and what changed for the people who used it?", "kind": "long_text", "required": true },
+    { "label": "How did you hear about us?", "kind": "short_text" }
+  ]
+}

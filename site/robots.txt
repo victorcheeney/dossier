@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dossier.victorc.dev/sitemap.xml

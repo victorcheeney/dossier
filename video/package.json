@@ -1,0 +1,17 @@
+{
+  "name": "dossier-video",
+  "private": true,
+  "description": "Dossier's demo video, made with HyperFrames.",
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.ts",
+    "sounds": "node sounds.ts",
+    "preview": "node sounds.ts && HYPERFRAMES_NO_TELEMETRY=1 hyperframes preview",
+    "check": "node sounds.ts && HYPERFRAMES_NO_TELEMETRY=1 hyperframes check",
+    "render": "node render.ts"
+  },
+  "devDependencies": {
+    "gsap": "3.14.2",
+    "hyperframes": "0.8.214"
+  }
+}

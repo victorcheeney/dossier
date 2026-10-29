@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Dossier connects</title>
+<style>
+  @font-face { font-family: 'Inter'; font-weight: 400 700; font-display: swap; src: url(/fonts/inter-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Instrument Serif'; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-latin.woff2) format('woff2'); }
+  :root {
+    --ink: #0a0a0a; --muted: #6b6b6b; --rule: #e5e5e5; --card: #f8f8f8;
+    --hl: #fff1a6; --hl-strong: #ffe36e;
+    --sans: 'Inter', Arial, sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #fff; color: var(--ink); font: 14px/1.5 var(--sans); }
+  body { overflow: hidden; }
+  .wrap { width: 100%; }
+  .caption { margin: 0 0 12px; color: var(--muted); font: 12px var(--mono); text-align: center; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  .ring { fill: none; stroke: var(--rule); stroke-dasharray: 2 6; }
+  .spoke { stroke: var(--rule); fill: none; }
+  .link { stroke: #d4d4d4; stroke-dasharray: 3 4; fill: none; }
+  .spoke-on { stroke: var(--ink); stroke-width: 1.25; fill: none; opacity: 0; transition: opacity .3s var(--ease); }
+  .spoke-on.on { opacity: 1; }
+
+  .tile { fill: #fff; stroke: var(--rule); }
+  .hub-tile { fill: var(--card); stroke: var(--rule); }
+  .halo { fill: none; stroke: var(--ink); stroke-width: 1.25; opacity: 0; transition: opacity .3s var(--ease); }
+  .halo.on { opacity: 1; }
+  .label-serif { font: 19px var(--serif); fill: var(--ink); }
+  .wordmark { font: 600 9.5px var(--sans); letter-spacing: 2.2px; fill: var(--ink); }
+  .tiny { font: 8px var(--mono); fill: var(--muted); }
+
+  .pill { opacity: 0; transform: translateY(3px); transform-box: fill-box; transition: opacity .25s var(--ease), transform .25s var(--ease); }
+  .pill.on { opacity: 1; transform: none; }
+  .pill rect { fill: #fff; stroke: var(--ink); }
+  .pill.yellow rect { fill: var(--hl); }
+  .pill text { font: 10px var(--mono); fill: var(--ink); dominant-baseline: central; text-anchor: middle; }
+
+  .call { fill: var(--ink); opacity: 0; }
+  .call.yellow { fill: var(--hl-strong); stroke: var(--ink); }
+  .result { fill: #fff; stroke: var(--ink); opacity: 0; }
+  .result.yellow { fill: var(--hl); }
+
+  .track { fill: #f2f2f2; }
+  .fill { transform: scaleX(0); transform-box: fill-box; transform-origin: left center; transition: transform .6s var(--ease); }
+  .fill.on { transform: scaleX(1); }
+  .fade { opacity: 0; transition: opacity .4s var(--ease); }
+  .fade.on { opacity: 1; }
+  .flash { fill: var(--hl); opacity: 0; transition: opacity .35s var(--ease); }
+  .flash.on { opacity: .6; }
+  .caret { opacity: 0; }
+  .caret.on { animation: blink .5s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg viewBox="0 30 560 405" role="img" aria-label="Your AI sits at the centre and calls MCP tools on every service: it fetches the posting, searches GitHub and Notion, and writes the application into Dossier, where you highlight and edit.">
+    <circle class="ring" cx="230" cy="215" r="145"/>
+    <g id="spokes"></g>
+    <path class="link" d="M163 330 Q250 420 410 360"/>
+    <path id="link-on" class="spoke-on" d="M163 330 Q250 420 410 360"/>
+    <g id="travellers"></g>
+
+    <!-- Your AI, the hub -->
+    <rect class="hub-tile" x="170" y="177" width="120" height="76" rx="14"/>
+    <rect id="halo-ai" class="halo" x="170" y="177" width="120" height="76" rx="14"/>
+    <image href="/media/logos/claude.svg" x="200" y="187" width="24" height="24"/>
+    <line x1="230" y1="190" x2="230" y2="208" stroke="#e5e5e5"/>
+    <image href="/media/logos/openai.svg" x="236" y="187" width="24" height="24"/>
+    <text class="label-serif" x="230" y="239" text-anchor="middle">Your AI</text>
+
+    <g id="nodes"></g>
+
+    <!-- You -->
+    <circle class="tile" cx="137" cy="326" r="26"/>
+    <circle id="halo-you" class="halo" cx="137" cy="326" r="26"/>
+    <circle cx="137" cy="319" r="7" fill="#6b6b6b"/>
+    <path d="M123 340 a14 11 0 0 1 28 0 Z" fill="#6b6b6b"/>
+    <text class="label-serif" x="137" y="375" text-anchor="middle">You</text>
+
+    <!-- Dossier, the local page -->
+    <rect class="tile" x="382" y="200" width="166" height="160" rx="12"/>
+    <rect id="flash" class="flash" x="382" y="200" width="166" height="160" rx="12"/>
+    <rect id="halo-dossier" class="halo" x="382" y="200" width="166" height="160" rx="12"/>
+    <text class="wordmark" x="398" y="221">DOSSIER</text>
+    <rect x="500" y="210" width="32" height="15" rx="7.5" fill="#fff" stroke="#e5e5e5"/>
+    <text class="tiny" x="516" y="220.5" text-anchor="middle">MCP</text>
+    <line x1="382" y1="232" x2="548" y2="232" stroke="#e5e5e5"/>
+
+    <text class="tiny" x="398" y="248">posting</text>
+    <rect class="track" x="398" y="254" width="84" height="5" rx="1.5"/>
+    <rect class="track" x="398" y="264" width="128" height="4" rx="1.5"/>
+    <rect class="track" x="398" y="273" width="104" height="4" rx="1.5"/>
+    <rect class="fill" data-part="posting" x="398" y="254" width="84" height="5" rx="1.5" fill="#0a0a0a" fill-opacity=".85"/>
+    <rect class="fill" data-part="posting" style="transition-delay:.08s" x="398" y="264" width="128" height="4" rx="1.5" fill="#bdbdbd"/>
+    <rect class="fill" data-part="highlight" x="395" y="270" width="110" height="10" rx="2" fill="#fff1a6"/>
+    <rect class="fill" data-part="posting" style="transition-delay:.16s" x="398" y="273" width="104" height="4" rx="1.5" fill="#bdbdbd"/>
+    <g class="fade" data-part="highlight" style="transition-delay:.3s">
+      <rect x="510" y="269" width="24" height="12" rx="3" fill="#fff1a6" stroke="#ffe36e"/>
+      <text class="tiny" x="522" y="278" text-anchor="middle" fill="#0a0a0a">note</text>
+    </g>
+
+    <text class="tiny" x="398" y="292">answer</text>
+    <rect class="track" x="398" y="298" width="132" height="4" rx="1.5"/>
+    <rect class="track" x="398" y="307" width="92" height="4" rx="1.5"/>
+    <rect class="fill" data-part="answer" x="398" y="298" width="132" height="4" rx="1.5" fill="#6b6b6b"/>
+    <rect class="fill" data-part="answer" style="transition-delay:.1s" x="398" y="307" width="92" height="4" rx="1.5" fill="#6b6b6b"/>
+    <rect class="fill" data-part="edit" x="490" y="307" width="26" height="4" rx="1.5" fill="#0a0a0a"/>
+    <rect class="caret" data-part="edit" x="518" y="304" width="1.2" height="10" fill="#0a0a0a"/>
+
+    <text class="tiny" x="398" y="326">résumé</text>
+    <rect class="track" x="398" y="332" width="120" height="4" rx="1.5"/>
+    <rect class="track" x="398" y="341" width="76" height="4" rx="1.5"/>
+    <rect class="fill" data-part="resume" x="398" y="332" width="120" height="4" rx="1.5" fill="#6b6b6b"/>
+    <rect class="fill" data-part="resume" style="transition-delay:.1s" x="398" y="341" width="76" height="4" rx="1.5" fill="#6b6b6b"/>
+
+    <g id="pills"></g>
+  </svg>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs, parent) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (parent) parent.appendChild(node);
+    return node;
+  };
+
+  const HUB = { x: 230, y: 215 };
+  const points = {
+    you: { x: 137, y: 326 },
+    greenhouse: { x: 94, y: 165 },
+    github: { x: 169, y: 84 },
+    notion: { x: 291, y: 84 },
+    linkedin: { x: 366, y: 165 },
+    dossier: { x: 382, y: 280 },
+  };
+
+  const spokeOn = {};
+  for (const [name, p] of Object.entries(points)) {
+    el('line', { class: 'spoke', x1: HUB.x, y1: HUB.y, x2: p.x, y2: p.y }, $('spokes'));
+    spokeOn[name] = el('line', { class: 'spoke-on', x1: HUB.x, y1: HUB.y, x2: p.x, y2: p.y }, $('spokes'));
+  }
+  spokeOn.link = $('link-on');
+
+  const halo = { ai: $('halo-ai'), you: $('halo-you'), dossier: $('halo-dossier') };
+  for (const name of ['greenhouse', 'github', 'notion', 'linkedin']) {
+    const p = points[name];
+    el('circle', { class: 'tile', cx: p.x, cy: p.y, r: 22 }, $('nodes'));
+    halo[name] = el('circle', { class: 'halo', cx: p.x, cy: p.y, r: 22 }, $('nodes'));
+    el('image', { href: `/media/logos/${name}.svg`, x: p.x - 10, y: p.y - 10, width: 20, height: 20 }, $('nodes'));
+  }
+
+  // Each label sits beside its spoke, never on it, so travelling dots don't cross the text.
+  const pillAt = {
+    you: [130, 265], greenhouse: [146, 154], github: [107, 130], notion: [333, 130],
+    linkedin: [314, 154], dossier: [322, 284], link: [268, 410],
+  };
+  const makePill = (text, spot, yellow) => {
+    const [x, y] = pillAt[spot];
+    const g = el('g', { class: 'pill' + (yellow ? ' yellow' : '') }, $('pills'));
+    const r = el('rect', { y: y - 8, height: 16, rx: 8 }, g);
+    const t = el('text', { x, y }, g);
+    t.textContent = text;
+    const w = t.getComputedTextLength() + 16;
+    r.setAttribute('x', x - w / 2);
+    r.setAttribute('width', w);
+    return g;
+  };
+
+  const linkPath = $('link-on');
+  const linkLength = linkPath.getTotalLength();
+  const line = (from, to) => (t) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+  const out = (name) => line(HUB, points[name]);
+  const back = (name) => line(points[name], HUB);
+  const youToDossier = (t) => linkPath.getPointAtLength(t * linkLength);
+
+  // The flow. A call travels out as a dot; when a tool returns data, a small result travels back.
+  const flow = [
+    { dur: .8, spoke: 'you', ends: ['you', 'ai'], label: 'posting link', call: back('you') },
+    { dur: 1.0, spoke: 'greenhouse', ends: ['greenhouse', 'ai'], label: 'fetch', call: out('greenhouse'), result: back('greenhouse') },
+    { dur: 1.0, spoke: 'dossier', ends: ['ai', 'dossier'], label: 'read_form_fields', call: out('dossier'), result: back('dossier') },
+    { dur: .8, spoke: 'dossier', ends: ['ai', 'dossier'], label: 'add_application', call: out('dossier'), lands: 'posting' },
+    { dur: 1.0, spoke: 'link', ends: ['you', 'dossier'], label: 'highlight', call: youToDossier, yellow: true, lands: 'highlight' },
+    { dur: 1.0, spoke: 'dossier', ends: ['ai', 'dossier'], label: 'get_application', call: out('dossier'), result: back('dossier'), yellowResult: true },
+    { dur: 1.0, spoke: 'github', ends: ['github', 'ai'], label: 'search_pull_requests', call: out('github'), result: back('github') },
+    { dur: 1.0, spoke: 'notion', ends: ['notion', 'ai'], label: 'notion-search', call: out('notion'), result: back('notion'), overlap: .55 },
+    { dur: 1.0, spoke: 'linkedin', ends: ['linkedin', 'ai'], label: 'fetch', call: out('linkedin'), result: back('linkedin'), overlap: .55 },
+    { dur: .8, spoke: 'dossier', ends: ['ai', 'dossier'], label: 'set_answer', call: out('dossier'), lands: 'answer' },
+    { dur: .8, spoke: 'dossier', ends: ['ai', 'dossier'], label: 'set_resume', call: out('dossier'), lands: 'resume' },
+    { dur: .9, spoke: 'link', ends: ['you', 'dossier'], label: 'edit', call: youToDossier, lands: 'edit' },
+  ];
+  const HOLD = .6, CLEAR = .45;
+  let clock = 0;
+  for (const step of flow) {
+    clock -= step.overlap || 0;
+    step.start = clock;
+    clock += step.dur;
+    const oneWay = !step.result;
+    step.callSpan = oneWay ? [0, .7] : [0, .45];
+    step.resultSpan = [.52, .97];
+    step.landsAt = step.start + step.dur * step.callSpan[1];
+    step.pill = makePill(step.label, step.spoke, step.yellow);
+    step.dot = el('circle', { class: 'call' + (step.yellow ? ' yellow' : ''), r: 4 }, $('travellers'));
+    if (step.result) step.chip = el('rect', { class: 'result' + (step.yellowResult ? ' yellow' : ''), x: -5, y: -4, width: 10, height: 8, rx: 2 }, $('travellers'));
+  }
+  const LOOP = clock + HOLD;
+
+  const parts = {};
+  for (const node of document.querySelectorAll('[data-part]')) (parts[node.dataset.part] ||= []).push(node);
+  const flash = $('flash');
+  const highlightStep = flow.find((s) => s.lands === 'highlight');
+  const ease = (t) => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+  const setOn = (node, on) => { if (node.classList.contains('on') !== on) node.classList.toggle('on', on); };
+
+  const travel = (node, path, span, local) => {
+    const t = (local - span[0]) / (span[1] - span[0]);
+    if (t <= 0 || t >= 1) { node.style.opacity = 0; return; }
+    const p = path(ease(t));
+    node.setAttribute('transform', `translate(${p.x} ${p.y})`);
+    node.style.opacity = Math.min(1, t * 6, (1 - t) * 6);
+  };
+
+  const render = (time) => {
+    const active = flow.filter((s) => time >= s.start && time < s.start + s.dur);
+    const spokesOn = new Set(active.map((s) => s.spoke));
+    const endsOn = new Set(active.flatMap((s) => s.ends));
+    for (const [name, node] of Object.entries(spokeOn)) setOn(node, spokesOn.has(name));
+    for (const [name, node] of Object.entries(halo)) setOn(node, endsOn.has(name));
+
+    for (const step of flow) {
+      const local = (time - step.start) / step.dur;
+      setOn(step.pill, active.includes(step));
+      travel(step.dot, step.call, step.callSpan, local);
+      if (step.chip) travel(step.chip, step.result, step.resultSpan, local);
+    }
+
+    const clearing = time > LOOP - CLEAR;
+    for (const [name, nodes] of Object.entries(parts)) {
+      const step = flow.find((s) => s.lands === name);
+      for (const node of nodes) setOn(node, time >= step.landsAt && !clearing);
+    }
+    setOn(flash, time >= highlightStep.landsAt && time < highlightStep.start + highlightStep.dur + .2);
+  };
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    for (const [name, nodes] of Object.entries(parts)) if (name !== 'edit') nodes.forEach((n) => n.classList.add('on'));
+    for (const node of Object.values(spokeOn)) node.style.opacity = .3;
+    for (const step of flow) {
+      if (['greenhouse', 'github', 'notion', 'linkedin'].includes(step.spoke) || step.label === 'set_answer') {
+        step.pill.classList.add('on');
+        spokeOn[step.spoke].style.opacity = 1;
+      }
+    }
+    return;
+  }
+
+  let origin = null;
+  const frame = (now) => {
+    if (origin === null) origin = now;
+    render(((now - origin) / 1000) % LOOP);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

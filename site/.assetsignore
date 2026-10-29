@@ -1,0 +1,10 @@
+node_modules/
+package.json
+package-lock.json
+cloudflare.config.ts
+wrangler.config.ts
+README.md
+.gitignore
+.DS_Store
+.cloudflare/
+.wrangler/

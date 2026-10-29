@@ -1,0 +1,975 @@
+<template>
+  <link rel="stylesheet" href="assets/dossier/dossier.css">
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(120% 90% at 30% 20%, #f7f7f7 0%, #ececec 60%, #e4e4e4 100%); }
+    /* The stage is laid out at 1600×900 and drawn at 1.2× to fill 1920×1080. */
+    #st-stage { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform: scale(1.2); transform-origin: 0 0; font: 16px/1.5 'Dossier Inter', Inter, sans-serif; color: #0a0a0a; }
+    #st-cam { position: absolute; inset: 0; }
+
+    /* Windows: soft white cards with a quiet title bar. */
+    .st-win { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; background: #fff; border-radius: 14px; overflow: hidden;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 40px rgb(0 0 0 / 0.10); outline: 1px solid rgb(0 0 0 / 0.06); }
+    .st-bar { flex: none; position: relative; height: 40px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #ececec; background: #fafafa; font-size: 13px; color: #6b6b6b; }
+    .st-dots { position: absolute; left: 16px; top: 15px; display: flex; gap: 7px; }
+    .st-dots i { width: 11px; height: 11px; border-radius: 50%; background: #dcdcdc; }
+    .st-url { padding: 3px 14px; border-radius: 999px; background: #f0f0f0; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-title { font-weight: 500; color: #0a0a0a; }
+    .st-body { flex: 1; overflow: hidden; padding: 22px 28px; }
+
+    #st-posting { width: 620px; height: 600px; }
+    #st-files { width: 500px; height: 380px; }
+    #st-form { width: 600px; height: 560px; }
+    .st-posting-body { font-size: 14px; line-height: 1.6; color: #333; }
+    .st-posting-body h3, .st-form-body h3 { margin: 0 0 4px; font-size: 22px; font-weight: 600; color: #0a0a0a; }
+    .st-posting-body p { margin: 0 0 10px; }
+    .st-posting-body .st-meta { margin: 0 0 14px; color: #6b6b6b; }
+    .st-form-body { font-size: 14px; }
+    .st-form-body h3 { margin-bottom: 16px; }
+    .st-form-body label { display: block; margin: 12px 0 6px; font-weight: 500; }
+    .st-box { height: 38px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px 12px; color: #333; }
+    .st-box.st-tall { height: 84px; }
+    .st-box.st-attach { width: 140px; text-align: center; background: #f2f2f2; border-color: #f2f2f2; }
+    .st-files { position: relative; z-index: 1; list-style: none; margin: 0; padding: 12px 16px; font-size: 15px; }
+    .st-files li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px; }
+    .st-row-on { position: absolute; z-index: 0; border-radius: 8px; background: #f2f2f2; }
+    .st-doc { width: 32px; height: 38px; border-radius: 4px; background: #f2f2f2; border: 1px solid #e0e0e0; font-size: 9px; font-weight: 600; color: #6b6b6b; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+
+    /* The Agent's chat, drawn for the video: neutral, no product's look. */
+    #st-chat { width: 450px; height: 490px; }
+    .st-msgs { position: absolute; left: 0; right: 0; top: 40px; bottom: 84px; padding: 20px 20px 8px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.55; overflow: hidden; }
+    #st-old-msgs { justify-content: flex-end; }
+    #st-old-list { display: flex; flex-direction: column; gap: 14px; flex: none; }
+    .st-msg { display: block; }
+    .st-user { align-self: flex-end; max-width: 82%; background: #f0f0f0; padding: 9px 14px; border-radius: 16px 16px 4px 16px; transform-origin: 100% 100%; }
+    .st-agent { align-self: stretch; color: #1a1a1a; transform-origin: 0 100%; }
+    .st-agent p { margin: 0; }
+    .st-line { display: block; height: 9px; margin: 7px 0; border-radius: 5px; background: #ececec; }
+    .st-tool { display: flex; align-items: center; gap: 8px; font: 13px/1.4 'JetBrains Mono', monospace; color: #6b6b6b; padding: 6px 10px; background: #f7f7f7; border: 1px solid #ededed; border-radius: 8px; align-self: flex-start; transform-origin: 0 50%; }
+    .st-state { display: inline-block; width: 14px; text-align: center; color: #0a0a0a; }
+    .st-server { color: #9a9a9a; }
+    .st-composer { position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; gap: 10px; align-items: flex-end; padding: 12px 12px 12px 16px; border: 1px solid #e3e3e3; border-radius: 14px; font-size: 15px; min-height: 50px; background: #fff; }
+    .st-input { flex: 1; min-height: 24px; white-space: pre-wrap; }
+    .st-placeholder { color: #9a9a9a; }
+    /* The text cursor where the Candidate types. */
+    .st-caret { position: absolute; z-index: 40; width: 1.6px; background: #0a0a0a; opacity: 0; pointer-events: none; }
+    #st-composer-caret { display: inline-block; width: 1.5px; height: 19px; margin-left: 1px; vertical-align: -4px; background: #0a0a0a; opacity: 0; }
+    .st-send { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #171717; display: flex; align-items: center; justify-content: center; }
+    .st-send svg { width: 16px; height: 16px; }
+
+    /* Dossier, as its own pages: 1200 CSS pixels wide, scaled to the window. */
+    #st-dwin { width: 1050px; height: 820px; }
+    .st-dcontent { position: relative; flex: 1; overflow: hidden; background: #fff; }
+    #st-dscale { position: absolute; left: 0; top: 0; width: 1200px; height: 891px; transform-origin: 0 0; transform: scale(0.875); }
+    .st-dpage { position: absolute; inset: 0; }
+    .st-dpage > .dossier { height: 100%; }
+    .dossier .resume-shot { display: block; width: 100%; }
+    .dossier .answer.st-focus, .dossier .popover textarea.st-focus { outline: 2px solid var(--focus); outline-offset: 0; border-color: transparent; }
+    .dossier mark.highlight.st-pending { background: transparent; }
+    .dossier mark.highlight.st-pending::after { display: none; }
+    .dossier .st-selected { background: #d9d9d9; }
+
+    #st-cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.25)); }
+
+    #st-black { position: absolute; inset: 0; background: #0a0a0a; opacity: 0; }
+    /* Captions: speech bubbles in the Candidate's voice. */
+    .st-bubble { position: absolute; padding: 12px 20px; border-radius: 18px; background: #fff; color: #0a0a0a; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 10px 30px rgb(0 0 0 / 0.14); transform-origin: 0 100%; opacity: 0; }
+  </style>
+
+  <div id="root" data-composition-id="story" data-width="1920" data-height="1080">
+    <div id="st-stage">
+      <div id="st-cam">
+        <!-- The problem: one job spread over four windows. -->
+        <div class="st-win" id="st-posting" data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="st-bar"><span class="st-dots"><i></i><i></i><i></i></span><span class="st-url">jobs.example.com/acme/product-engineer</span></div>
+          <div class="st-body st-posting-body">
+            <h3>Product Engineer</h3>
+            <p class="st-meta">Acme · Remote, Canada · Full-time</p>
+            <p><strong>About Acme</strong></p>
+            <p>Acme builds tools for small grocers. Independent grocery stores run on thin margins and long days. Most of them still order stock by phone, count shelves on paper and find out a product is losing money weeks after the fact.</p>
+            <p><strong>The role</strong></p>
+            <p>You will ship features end to end. As a Product Engineer on the Ordering team, you will talk to grocers, decide with your team what to build, write the code across our web app and API, and watch how it gets used once it is live.</p>
+            <p><strong>What we are looking for</strong></p>
+            <p>Four or more years building web products that people pay for, with real ownership of what you shipped. Strong TypeScript, and comfort with a relational database.</p>
+          </div>
+        </div>
+        <div class="st-win" id="st-files" data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="st-bar"><span class="st-dots"><i></i><i></i><i></i></span><span class="st-url">Downloads</span></div>
+          <div id="st-row-on" class="st-row-on"></div>
+          <ul class="st-body st-files">
+            <li><span class="st-doc">PDF</span>resume.pdf</li>
+            <li><span class="st-doc">PDF</span>resume_final.pdf</li>
+            <li><span class="st-doc">PDF</span>resume_final_v2.pdf</li>
+            <li><span class="st-doc">PDF</span>resume_final_v2 (1).pdf</li>
+            <li><span class="st-doc">PDF</span>resume_ACME_maybe.pdf</li>
+            <li><span class="st-doc">MD</span>handbook_notes.md</li>
+            <li><span class="st-doc">DOC</span>cover letter OLD.docx</li>
+          </ul>
+        </div>
+        <div class="st-win" id="st-form" data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="st-bar"><span class="st-dots"><i></i><i></i><i></i></span><span class="st-url">jobs.example.com/acme/product-engineer/apply</span></div>
+          <div class="st-body st-form-body">
+            <h3>Apply: Product Engineer</h3>
+            <label>Full name *</label><div class="st-box">Alex Martin</div>
+            <label>Résumé *</label><div class="st-box st-attach">Attach file</div>
+            <label>Why Acme? *</label><div class="st-box st-tall"></div>
+            <label>Tell us about something you shipped end to end. *</label><div class="st-box st-tall"></div>
+          </div>
+        </div>
+
+        <!-- The Agent's chat: first a long old conversation, then a new one. -->
+        <div class="st-win" id="st-chat" data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="st-bar"><span class="st-dots"><i></i><i></i><i></i></span><span class="st-title" id="st-chat-title">Agent</span></div>
+          <div class="st-msgs" id="st-old-msgs">
+            <div id="st-old-list">
+            <div class="st-msg st-user">here's the job posting again</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:90%"></span><span class="st-line" style="width:84%"></span><span class="st-line" style="width:66%"></span></div>
+            <div class="st-msg st-user">and here's my resume</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:93%"></span><span class="st-line" style="width:70%"></span></div>
+            <div class="st-msg st-user">can you make my resume better for this job</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:92%"></span><span class="st-line" style="width:86%"></span><span class="st-line" style="width:95%"></span><span class="st-line" style="width:60%"></span></div>
+            <div class="st-msg st-user">no, the other version. the one from tuesday</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:88%"></span><span class="st-line" style="width:94%"></span><span class="st-line" style="width:40%"></span></div>
+            <div class="st-msg st-user">wait which job were we on</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:90%"></span><span class="st-line" style="width:72%"></span></div>
+            <div class="st-msg st-user">ok write a cover letter</div>
+            <div class="st-msg st-agent"><span class="st-line" style="width:94%"></span><span class="st-line" style="width:89%"></span><span class="st-line" style="width:91%"></span><span class="st-line" style="width:83%"></span><span class="st-line" style="width:52%"></span></div>
+            </div>
+          </div>
+          <div class="st-msgs" id="st-msgs">
+            <div class="st-msg st-user" id="st-m-found">Found one I like.<br>jobs.example.com/acme/product-engineer</div>
+            <div class="st-msg st-agent" id="st-m-reading"><p>Reading the posting and its form. 8 fields.</p></div>
+            <div class="st-msg st-tool" id="st-t-add"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> add_application</span></div>
+            <div class="st-msg st-tool" id="st-t-answers"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> set_answer · 4 fields</span></div>
+            <div class="st-msg st-tool" id="st-t-summary"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> set_summary</span></div>
+            <div class="st-msg st-tool" id="st-t-note"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> add_note</span></div>
+            <div class="st-msg st-agent" id="st-m-fits"><p>It fits your Criteria. One thing to weigh: a paid four-hour take-home. I put a Note on the page.</p></div>
+            <div class="st-msg st-user" id="st-m-draft">Draft "Why Acme?" from my highlight.</div>
+            <div class="st-msg st-tool" id="st-t-get"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> get_application</span></div>
+            <div class="st-msg st-tool" id="st-t-set"><span class="st-state">·</span><span><span class="st-server">dossier ·</span> set_answer</span></div>
+            <div class="st-msg st-agent" id="st-m-drafted"><p>Drafted from your Highlight and your Pinecrest story. Change anything that doesn’t sound like you.</p></div>
+          </div>
+          <div class="st-composer"><div class="st-input"><span class="st-placeholder" id="st-placeholder">Message your agent</span><span id="st-typed"></span><span id="st-composer-caret"></span></div><span class="st-send"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        </div>
+
+        <!-- Dossier: static copies of its real pages, made by capture.ts. -->
+        <div class="st-win" id="st-dwin">
+          <div class="st-bar"><span class="st-dots"><i></i><i></i><i></i></span><span class="st-url" id="st-durl">localhost:4747</span></div>
+          <div class="st-dcontent">
+            <div id="st-dscale">
+              <div class="st-dpage" id="st-dpage-home">
+<!-- capture:home -->
+<div class="dossier "><nav class="topbar">
+  <a class="brand" href="/">Dossier</a>
+  <a href="/" class="on">Applications</a>
+  <a href="/profile" class="">Profile</a>
+</nav>
+<main class="narrow">
+  <h1>Applications</h1>
+  <p class="lead">Connect your Agent to Dossier. Run one of these in a terminal:</p>
+  <section class="card connect">
+    <h2 class="label">Claude Code</h2>
+    <code>claude mcp add --transport http dossier http://localhost:4747/mcp</code>
+  </section><section class="card connect">
+    <h2 class="label">Codex</h2>
+    <code>codex mcp add dossier --url http://localhost:4747/mcp</code>
+  </section>
+  
+  <p class="next">Paste a job posting in your Agent's chat.</p>
+  <form method="post" action="/example/remove" class="remove-example">
+    <button class="link-button">Remove the Example</button>
+  </form>
+</main></div>
+<!-- /capture:home -->
+              </div>
+              <div class="st-dpage" id="st-dpage-app" data-layout-allow-overlap data-layout-allow-occlusion>
+<!-- capture:application -->
+<div class="dossier fills-screen"><nav class="topbar">
+  <a class="brand" href="/">Dossier</a>
+  <a href="/" class="on">Applications</a>
+  <a href="/profile" class="">Profile</a>
+</nav>
+<div class="workspace" data-application="1">
+  <section class="column left">
+    <header class="glance" data-region="glance"><h1>Acme · Product Engineer</h1>
+  <div class="facts">
+    <span>CA$230K–260K</span>
+    <span>Remote, Canada</span>
+    <form method="post" action="/applications/1/stage" class="stage">
+      <label class="visually-hidden" for="stage">Stage</label>
+      <select id="stage" name="stage" class="pill">
+        <option value="Preparing" selected="">Preparing</option><option value="Applied">Applied</option><option value="Interviewing">Interviewing</option><option value="Offer">Offer</option><option value="Closed · rejected">Closed · rejected</option><option value="Closed · withdrew">Closed · withdrew</option><option value="Closed · accepted">Closed · accepted</option>
+      </select>
+      
+    </form>
+    <a href="https://jobs.example.com/acme/product-engineer" target="_blank" rel="noreferrer">Posting ↗</a>
+  </div></header>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="posting" aria-selected="true">Posting</button>
+      <button type="button" role="tab" data-tab="summary" aria-selected="false">Summary</button>
+      <button type="button" role="tab" data-tab="research" aria-selected="false">Research</button>
+      <button type="button" role="tab" data-tab="highlights" aria-selected="false">Highlights<span class="count" data-region="highlight-count"> 1</span></button>
+      <button type="button" role="tab" data-tab="notes" aria-selected="false">Notes<span class="count" data-region="note-count"> 1</span></button>
+    </nav>
+    <div class="pane" data-pane="posting" data-region="posting" data-highlightable="posting"><div class="posting-text">Product Engineer
+Acme · Remote, Canada · Full-time
+
+About Acme
+
+Acme builds tools for small grocers.
+
+Independent grocery stores run on thin margins and long days. Most of them still order stock by phone, count shelves on paper and find out a product is losing money weeks after the fact. Acme gives them one place to order from their suppliers, see what is selling, and price it with confidence. More than 1,800 stores across Canada use Acme every morning before they open.
+
+We are a team of 42, fully remote across Canadian time zones, and profitable since 2024. We grow from what our customers pay us, not from the next funding round.
+
+The role
+
+You will ship features end to end. As a Product Engineer on the Ordering team, you will talk to grocers, decide with your team what to build, write the code across our web app and API, and watch how it gets used once it is live. Nobody hands you a ticket with the answer already in it.
+
+In your first six months you might:
+
+- Rebuild how a grocer places a weekly order, so it takes ten minutes instead of an hour.
+- Add supplier price changes to the ordering screen, so a store sees a cost increase before it buys.
+- Pair with our support team for a week and fix the three problems grocers call about most.
+- Visit a store with a teammate and watch an owner use Acme at 6 a.m.
+
+What we are looking for
+
+- Four or more years building web products that people pay for, with real ownership of what you shipped.
+- Strong TypeScript, and comfort with a relational database (we use PostgreSQL).
+- You talk to users, and you can tell a request from the problem behind it.
+- You write clearly. Most of our work happens in written proposals and pull request descriptions.
+- You care about the boring parts: migrations, error messages, tests that catch real bugs.
+
+Nice to have: <mark class="highlight has-note" data-highlight-id="1" title="Pinecrest! I rebuilt their ordering.">experience with retail, inventory or logistics software; you have worked a till or stocked shelves</mark>.
+
+How we work
+
+- Small teams of four to six, each owning one part of the product, from the first conversation with a grocer to the support ticket after launch.
+- Written first. We decide in short documents, and keep meetings for the hard conversations.
+- Core hours of 11:00 to 15:00 Eastern; the rest of your day is yours.
+- We ship to production many times a day, behind flags when it matters.
+- Twice a year the whole company meets in person for a week.
+
+Pay and benefits
+
+- Salary: CA$230,000 to CA$260,000, depending on experience. We share the range for every role and we pay the same within a level, wherever in Canada you live.
+- Stock options in a profitable company.
+- Four weeks of vacation, plus the week between Christmas and New Year's.
+- Health and dental from your first day, and a CA$1,500 yearly budget for your home office and learning.
+
+Our values
+
+- Grocers first. If it does not help a store owner, it can wait.
+- Own the outcome. Shipping is the middle of the job, not the end.
+- Say it plainly. Clear writing beats clever writing.
+- Leave it better. Fix the small thing you walked past.
+
+Hiring process
+
+1. A short application with two written questions. We read every one.
+2. A 30-minute call with the hiring manager.
+3. A paid take-home: a small feature in a copy of our codebase, about four hours.
+4. A conversation about your take-home with two engineers.
+5. A chat with a grocer who uses Acme, and with our CEO.
+
+We aim to finish within three weeks and we tell everyone where they stand. You must be able to work from Canada.</div></div>
+    <div class="pane" data-pane="summary" data-region="summary" hidden=""><div class="markdown"><h3>The job</h3>
+<p>Product Engineer on the Ordering team: talk to grocers, decide what to build, ship it across the web app and API.</p>
+<h3>What they want</h3>
+<ul>
+<li>Four or more years on web products people pay for</li>
+<li>Strong TypeScript and PostgreSQL</li>
+<li>Talks to users and writes clearly</li>
+</ul>
+<h3>How they work</h3>
+<p>Small teams of four to six, written first, core hours 11:00 to 15:00 Eastern.</p>
+<h3>Process</h3>
+<p>Hiring manager call, paid four-hour take-home, review with two engineers, then a grocer and the CEO. About three weeks.</p>
+<h3>Watch out</h3>
+<p>Two in-person weeks a year.</p></div></div>
+    <div class="pane" data-pane="research" data-region="research" data-highlightable="research" hidden=""><p class="muted empty-state">Your Agent will put what it finds about Acme here: the product and who uses it, reviews, and questions to ask in interviews.</p></div>
+    <div class="pane" data-pane="highlights" data-region="highlights" hidden=""><ul class="highlight-list"><li class="card" data-highlight-id="1">
+      <button type="button" class="quote" data-action="show-highlight">experience with retail, inventory or logistics software; you have worked a till or stocked shelves</button>
+      <p class="meta">Posting</p>
+      <textarea class="highlight-note" data-highlight-note="" rows="1" aria-label="Note" placeholder="Why it matters to you" style="height: 0px;">Pinecrest! I rebuilt their ordering.</textarea>
+      <button type="button" class="link-button" data-action="delete-highlight">Delete</button>
+    </li></ul></div>
+    <div class="pane" data-pane="notes" hidden="">
+      <form class="note-add">
+        <label class="visually-hidden" for="new-note">New note</label>
+        <textarea id="new-note" name="text" rows="2" placeholder="Add a note, such as what a recruiter told you"></textarea>
+        <button class="button">Add note</button>
+      </form>
+      <div data-region="notes"><article class="card note" data-note-id="1">
+      <p class="meta"><strong>Oct 29</strong> · Agent · from the Posting and your Criteria</p>
+      <p class="note-text">Fits your Criteria: remote in Canada, above your pay floor, small businesses as customers. To weigh: a paid four-hour take-home.</p>
+      <div class="note-actions">
+        <button type="button" class="link-button" data-action="edit-note">Edit</button>
+        <button type="button" class="link-button" data-action="delete-note">Delete</button>
+      </div>
+    </article></div>
+    </div>
+  </section>
+  <main class="column form" data-region="fields">
+    <h2 class="label">Application form</h2>
+    <div class="field" data-field-id="1" data-shape="[&quot;Full name&quot;,&quot;short_text&quot;,[],true]">
+    <label for="field-1">Full name<span class="muted"> *</span><span class="saved" aria-live="polite"></span></label>
+    <input id="field-1" class="answer" value="Alex Martin" autocomplete="off">
+  </div><div class="field" data-field-id="2" data-shape="[&quot;Email&quot;,&quot;short_text&quot;,[],true]">
+    <label for="field-2">Email<span class="muted"> *</span><span class="saved" aria-live="polite"></span></label>
+    <input id="field-2" class="answer" value="alex.martin@example.com" autocomplete="off">
+  </div><div class="field" data-field-id="3" data-shape="[&quot;Résumé&quot;,&quot;file&quot;,[],true]">
+    <label>Résumé<span class="muted"> *</span><span class="saved" aria-live="polite"></span></label>
+    <p class="file-note muted">Attach the <a href="#resume">Résumé</a> from the right column.</p>
+  </div><div class="field" data-field-id="4" data-shape="[&quot;LinkedIn or website&quot;,&quot;short_text&quot;,[],false]">
+    <label for="field-4">LinkedIn or website<span class="saved" aria-live="polite"></span></label>
+    <input id="field-4" class="answer" value="example.com/alex-martin" autocomplete="off">
+  </div><div class="field" data-field-id="5" data-shape="[&quot;Are you in Canada?&quot;,&quot;choice&quot;,[&quot;Yes&quot;,&quot;No&quot;],false]">
+    <label for="field-5">Are you in Canada?<span class="saved" aria-live="polite"></span></label>
+    <select id="field-5" class="answer">
+      <option value="">Choose…</option>
+      <option selected="">Yes</option><option>No</option>
+    </select>
+  </div><div class="field" data-field-id="6" data-shape="[&quot;Why Acme?&quot;,&quot;long_text&quot;,[],true]">
+    <label for="field-6">Why Acme?<span class="muted"> *</span><span class="saved" aria-live="polite"></span></label>
+    <textarea id="why-acme" class="answer" rows="3" data-height-empty="83px" data-height-final="150px" data-height-draft="173px" style="height: auto;">At Pinecrest Market I was the only developer for four grocery stores. Every Sunday night a manager copied last week's order into a new spreadsheet, so I built a page that started from last week's order instead. Ordering went from three hours a week per store to one. Acme does the same work for 1,800 stores, and the Ordering team is where I would like to do it.</textarea>
+  </div><div class="field" data-field-id="7" data-shape="[&quot;Tell us about something you shipped end to end. What did you own, and what changed for the people who used it?&quot;,&quot;long_text&quot;,[],true]">
+    <label for="field-7">Tell us about something you shipped end to end. What did you own, and what changed for the people who used it?<span class="muted"> *</span><span class="saved" aria-live="polite"></span></label>
+    <textarea id="field-7" class="answer" rows="3" style="height: 83px;"></textarea>
+  </div><div class="field" data-field-id="8" data-shape="[&quot;How did you hear about us?&quot;,&quot;short_text&quot;,[],false]">
+    <label for="field-8">How did you hear about us?<span class="saved" aria-live="polite"></span></label>
+    <input id="field-8" class="answer" value="" autocomplete="off">
+  </div>
+    <form method="post" action="/applications/1/delete" class="danger">
+      <button class="button secondary">Delete Application</button>
+    </form>
+  </main>
+  <aside class="column resume" id="resume" data-region="resume"><header class="resume-head">
+    <h2 class="label">Résumé</h2>
+    <a href="/applications/1/resume" target="_blank">Open</a>
+    <a href="/applications/1/resume?print" target="_blank" class="button">Download PDF</a>
+  </header>
+  <div class="resume-warning" role="status" hidden=""></div>
+  <div class="resume-frame" style="height: 437.412px;"><img src="assets/dossier/resume.png" alt="" class="resume-shot"></div></aside>
+</div>
+
+<button type="button" class="highlight-button" hidden="">Highlight</button>
+<div class="popover" role="dialog" aria-label="Highlight" hidden="">
+  <label class="visually-hidden" for="highlight-note">Note</label>
+  <textarea id="highlight-note" rows="3" placeholder="Why it matters to you"></textarea>
+  <div class="popover-actions">
+    <button type="button" class="link-button" data-action="delete-highlight">Delete highlight</button>
+    <button type="button" class="button" data-action="close-popover">Done</button>
+  </div>
+</div></div>
+<!-- /capture:application -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <svg id="st-cursor" viewBox="0 0 28 28" aria-hidden="true">
+          <path d="M4 2 L4 22 L9.2 17.2 L12.6 25 L16 23.5 L12.7 15.9 L20 15.9 Z" fill="#0a0a0a" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div id="st-captions"></div>
+      <div id="st-black"></div>
+    </div>
+  </div>
+
+  <!-- Every timed moment of the story, in seconds. sounds.ts reads this too, so each sound lands on its picture. -->
+  <script type="application/json" id="st-timing">
+  {
+    "duration": 44,
+    "bpm": 120,
+    "drop": 8,
+    "events": {
+      "arrive": { "at": 0, "dur": 0.7, "sound": "whoosh" },
+      "cursorIn": { "at": 0.35, "dur": 0.6 },
+      "capWhy": { "at": 1, "dur": 2.2, "sound": "pop", "text": "Why did I like this job again?" },
+      "filesMove": { "at": 2.15, "dur": 0.5 },
+      "filesClick": { "at": 2.7, "sound": "click" },
+      "capResume": { "at": 2.9, "dur": 2.2, "sound": "pop", "text": "Which version of my résumé was this?" },
+      "rows": { "at": 3.05, "gap": 0.38 },
+      "chatMove": { "at": 4.3, "dur": 0.45 },
+      "chatClick": { "at": 4.8, "sound": "click" },
+      "capChat": { "at": 5.15, "dur": 2.2, "sound": "pop", "text": "…and what did I tell the AI last time?" },
+      "onePage": { "at": 7.5, "dur": 0.9, "sound": "whoosh" },
+      "capOnePage": { "at": 9.1, "dur": 2.2, "sound": "pop", "text": "Okay. One job, one page." },
+      "composerMove": { "at": 8.55, "dur": 0.45 },
+      "composerClick": { "at": 9.05, "sound": "click" },
+      "typeFound": { "at": 9.2, "text": "Found one I like. ", "cps": 24, "sound": "type" },
+      "paste": { "at": 10.05, "sound": "key" },
+      "sendMove": { "at": 10.25, "dur": 0.35 },
+      "sendClick": { "at": 10.65, "sound": "click" },
+      "reading": { "at": 11 },
+      "addApp": { "at": 11.3 },
+      "appOpen": { "at": 11.8 },
+      "setAnswers": { "at": 12.15 },
+      "fill": { "at": 12.45, "gap": 0, "count": 1, "sound": "fill" },
+      "setSummary": { "at": 13.6 },
+      "summaryMove": { "at": 13.7, "dur": 0.45 },
+      "summaryClick": { "at": 14.2, "sound": "click" },
+      "addNote": { "at": 14.7 },
+      "noteAdded": { "at": 15.15, "sound": "pop" },
+      "notesMove": { "at": 15.2, "dur": 0.4 },
+      "notesClick": { "at": 15.65, "sound": "click" },
+      "fits": { "at": 15.85 },
+      "capRead": { "at": 16.2, "dur": 2.2, "sound": "pop", "text": "Oh nice, it actually read the posting." },
+      "postingMove": { "at": 24.35, "dur": 0.4 },
+      "postingClick": { "at": 24.8, "sound": "click" },
+      "camPosting": { "at": 24.95, "dur": 0.6, "sound": "whoosh" },
+      "quoteMove": { "at": 25.65, "dur": 0.4 },
+      "capOldJob": { "at": 26.05, "dur": 2.3, "sound": "pop", "text": "Wait, that's my old job." },
+      "select": { "at": 26.1, "dur": 0.85, "sound": "drag" },
+      "buttonMove": { "at": 27.15, "dur": 0.3 },
+      "highlightClick": { "at": 27.5, "sound": "click" },
+      "typeNote": { "at": 27.75, "text": "Pinecrest! I rebuilt their ordering.", "cps": 26, "sound": "type" },
+      "doneMove": { "at": 29.2, "dur": 0.3 },
+      "doneClick": { "at": 29.55, "sound": "click" },
+      "camChat": { "at": 29.75, "dur": 0.6, "sound": "whoosh" },
+      "composer2Move": { "at": 29.8, "dur": 0.45 },
+      "composer2Click": { "at": 30.3, "sound": "click" },
+      "typeDraft": { "at": 30.45, "text": "Draft \"Why Acme?\" from my highlight.", "cps": 32, "sound": "type" },
+      "send2Move": { "at": 31.65, "dur": 0.3 },
+      "send2Click": { "at": 32, "sound": "click" },
+      "camWide2": { "at": 32.1, "dur": 0.6, "sound": "whoosh" },
+      "getApp": { "at": 32.3 },
+      "setDraft": { "at": 32.75 },
+      "draftLands": { "at": 33.2, "sound": "fill", "count": 1 },
+      "drafted": { "at": 33.4 },
+      "capNote": { "at": 33.55, "dur": 1.9, "sound": "pop", "text": "It used my note." },
+      "camField": { "at": 35.4, "dur": 0.6, "sound": "whoosh" },
+      "fieldMove": { "at": 36, "dur": 0.4 },
+      "fieldClick": { "at": 36.45, "sound": "click" },
+      "capMyWay": { "at": 36.55, "dur": 2.6, "sound": "pop", "text": "Close. Let me say it my way." },
+      "deleteWords": { "at": 36.7, "gap": 0.055, "text": "Acme does the same work for 1,800 stores, and the Ordering team is where I would like to do it.", "sound": "delete" },
+      "typeEnding": { "at": 37.9, "text": "I'd like to do that again, for 1,800 stores.", "cps": 26, "sound": "type" },
+      "saved": { "at": 39.9 },
+      "full": { "at": 40, "dur": 1.1, "sound": "whoosh" },
+      "poster": { "at": 41.15 },
+      "capSamePage": { "at": 41.2, "dur": 2.2, "sound": "pop", "text": "Posting, answers, résumé. Same page." },
+      "fadeOut": { "at": 43.5, "dur": 0.5, "sound": "whoosh" },
+      "endChime": { "at": 45, "sound": "chime" }
+    }
+  }
+  </script>
+
+  <script>
+    (() => {
+      const timing = JSON.parse(document.getElementById('st-timing').textContent);
+      const E = timing.events;
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+      // Layout of the stage, in its 1600×900 pixels.
+      const layout = {
+        posting: { x: 70, y: 60 },
+        files: { x: 1010, y: 70 },
+        form: { x: 470, y: 250 },
+        oldChat: { x: 1070, y: 370, w: 450, h: 490 },
+        chat: { x: 40, y: 40, w: 440, h: 820 },
+        dossier: { x: 510, y: 40, w: 1050, h: 820 },
+        full: { x: 40, y: 40, w: 1520, h: 820 },
+      };
+      const pageWidth = 1200; // Dossier's own width inside its window.
+      const barHeight = 40;
+
+      const cam = $('#st-cam');
+      const cursor = $('#st-cursor');
+      const chat = $('#st-chat');
+      const dwin = $('#st-dwin');
+      const dscale = $('#st-dscale');
+      const app = $('#st-dpage-app');
+      const home = $('#st-dpage-home');
+      const windows = { posting: $('#st-posting'), files: $('#st-files'), form: $('#st-form') };
+
+      function build() {
+        // ---------- Measure Dossier's page once, in stage pixels for the window at its usual place ----------
+        const pane = $('[data-pane="posting"]', app);
+        const mark = $('mark.highlight', app);
+        const answer = $('#why-acme', app);
+        const field = answer.closest('.field');
+        const form = $('.column.form', app);
+        const button = $('.highlight-button', app);
+        const popover = $('.popover', app);
+        const noteBox = $('#highlight-note', app);
+
+        // The quote's words, so the selection can grow word by word.
+        const quote = mark.textContent;
+        mark.textContent = '';
+        const words = quote.split(/(?<= )/).map((word) => {
+          const span = document.createElement('span');
+          span.textContent = word;
+          mark.append(span);
+          return span;
+        });
+
+        const pageRect = () => dscale.getBoundingClientRect();
+        // A point of an element on the stage when Dossier's window has the given layout.
+        const at = (el, fx = 0.5, fy = 0.5, win = layout.dossier, r = el.getBoundingClientRect()) => {
+          const page = pageRect();
+          const k = page.width / pageWidth;
+          const s = win.w / pageWidth;
+          return { x: win.x + ((r.left - page.left + r.width * fx) / k) * s, y: win.y + barHeight + ((r.top - page.top + r.height * fy) / k) * s };
+        };
+        const rectIn = (el) => {
+          const page = pageRect();
+          const k = page.width / pageWidth;
+          const r = el.getBoundingClientRect();
+          return { left: (r.left - page.left) / k, top: (r.top - page.top) / k, right: (r.right - page.left) / k, bottom: (r.bottom - page.top) / k, width: r.width / k, height: r.height / k };
+        };
+        // A tab is clicked on its label, not the middle of its padded box.
+        const tabPoint = (name) => {
+          const tab = $(`[data-tab="${name}"]`, app);
+          const label = document.createRange();
+          label.selectNodeContents(tab.firstChild);
+          return at(tab, 0.5, 0.5, layout.dossier, label.getBoundingClientRect());
+        };
+
+        const P = {};
+        P.summaryTab = tabPoint('summary');
+        P.notesTab = tabPoint('notes');
+        P.postingTab = tabPoint('posting');
+        P.column = (() => { const a = at($('.column.left', app), 0, 0); return a; })();
+
+        // The Posting scrolled so the quote sits a third of the way down; the Highlight button and popover placed
+        // the way highlights.js places them, under the selection.
+        const paneTop = rectIn(pane).top;
+        const scrollTo = pane.scrollTop + rectIn(mark).top - paneTop - 260;
+        pane.scrollTop = scrollTo;
+        const box = rectIn(mark);
+        P.wordStart = at(words[0], 0, 0.5);
+        P.wordEnds = words.map((w) => at(w, 1, 0.55));
+        button.style.left = `${box.left}px`;
+        button.style.top = `${box.bottom + 6}px`;
+        button.hidden = false;
+        P.button = at(button);
+        button.hidden = true;
+        popover.style.left = `${Math.max(8, Math.min(box.left, pageWidth - 300))}px`;
+        popover.style.top = `${Math.min(box.bottom + 6, 891 - 160)}px`;
+        popover.hidden = false;
+        P.done = at($('[data-action="close-popover"]', popover));
+        P.noteRest = at(noteBox, 0.82, 0.92);
+        popover.hidden = true;
+        pane.scrollTop = 0;
+
+        answer.style.height = answer.dataset.heightDraft;
+        const fieldRect = (() => { const a = at(field, 0, 0); const b = at(field, 1, 1); return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y }; })();
+        answer.style.height = answer.dataset.heightEmpty;
+
+        // The last beat: the window fills the stage and the form scrolls to the Answer.
+        const fullScale = layout.full.w / pageWidth;
+        dscale.style.height = `${(layout.full.h - barHeight) / fullScale}px`;
+        const formScroll = Math.max(0, form.scrollTop + rectIn(field).top - rectIn(form).top - 260);
+        form.scrollTop = formScroll;
+        P.resume = at($('.resume-shot', app), 0.35, 0.3, layout.full);
+        form.scrollTop = 0;
+        dscale.style.height = `${(layout.dossier.h - barHeight) / (layout.dossier.w / pageWidth)}px`;
+
+        // ---------- The page's state at any moment ----------
+        const typed = (event, t) => (t < event.at ? '' : event.text.slice(0, Math.min(event.text.length, Math.floor((t - event.at) * event.cps + 1e-6))));
+        const fills = [
+          ['Full name', 'Alex Martin'],
+          ['Email', 'alex.martin@example.com'],
+          ['LinkedIn or website', 'example.com/alex-martin'],
+          ['Are you in Canada?', 'Yes'],
+        ].map(([label, text], i) => {
+          const f = $$('.field', app).find((el) => el.querySelector('label').firstChild.textContent.trim() === label);
+          return { control: $('.answer', f), saved: $('.saved', f), text, at: E.fill.at + i * E.fill.gap };
+        });
+        const draft = answer.textContent;
+        const prefix = draft.slice(0, draft.length - E.deleteWords.text.length);
+        const deleteSteps = E.deleteWords.text.split(/(?<= )/);
+        const tabs = $$('[data-tab]', app);
+        const panes = $$('[data-pane]', app);
+        const highlightCount = $('[data-region="highlight-count"]', app);
+        const noteCount = $('[data-region="note-count"]', app);
+        const why = field.querySelector('.saved');
+        const chips = [
+          ['#st-t-add', E.addApp.at], ['#st-t-answers', E.setAnswers.at + 1.0], ['#st-t-summary', E.setSummary.at],
+          ['#st-t-note', E.addNote.at], ['#st-t-get', E.getApp.at], ['#st-t-set', E.setDraft.at],
+        ].map(([id, done]) => ({ state: $(`${id} .st-state`), done: done + 0.4 }));
+        const typedBox = $('#st-typed');
+        const placeholder = $('#st-placeholder');
+
+        // The Answer box grows with its text, as on the real page: measure each text the video shows, once.
+        const heights = new Map();
+        const measure = (text) => {
+          if (!heights.has(text)) {
+            answer.value = text;
+            answer.style.height = 'auto';
+            heights.set(text, text ? `${answer.scrollHeight + 2}px` : answer.dataset.heightEmpty);
+          }
+          return heights.get(text);
+        };
+        function whyText(t) {
+          if (t < E.draftLands.at) return '';
+          if (t < E.deleteWords.at) return draft;
+          if (t < E.typeEnding.at) {
+            const gone = Math.min(deleteSteps.length, Math.floor((t - E.deleteWords.at) / E.deleteWords.gap));
+            return prefix + deleteSteps.slice(0, deleteSteps.length - gone).join('');
+          }
+          return prefix + typed(E.typeEnding, t);
+        }
+
+        function apply(t) {
+          const tab = t < E.summaryClick.at + 0.05 ? 'posting' : t < E.notesClick.at + 0.05 ? 'summary' : t < E.postingClick.at + 0.05 ? 'notes' : 'posting';
+          for (const b of tabs) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+          for (const p of panes) p.hidden = p.dataset.pane !== tab;
+          const scrolled = t < E.camPosting.at ? 0 : Math.min(1, (t - E.camPosting.at) / E.camPosting.dur);
+          pane.scrollTop = scrollTo * gsap.parseEase('power2.inOut')(scrolled);
+
+          for (const f of fills) {
+            // The Agent sets each Answer whole, as the real page shows it.
+            const n = t < f.at ? 0 : f.text.length;
+            const value = f.text.slice(0, n);
+            if (f.control.tagName === 'SELECT') f.control.value = n > 0 ? f.text : '';
+            else f.control.value = value;
+            f.saved.textContent = n >= f.text.length ? 'Updated' : '';
+          }
+          highlightCount.textContent = t >= E.highlightClick.at + 0.05 ? ' 1' : '';
+          noteCount.textContent = t >= E.noteAdded.at ? ' 1' : '';
+
+          const selecting = t >= E.select.at && t < E.highlightClick.at + 0.05;
+          const chosen = !selecting ? 0 : Math.max(1, Math.min(words.length, Math.ceil(((t - E.select.at) / E.select.dur) * words.length)));
+          words.forEach((w, i) => w.classList.toggle('st-selected', i < chosen));
+          mark.classList.toggle('st-pending', t < E.highlightClick.at + 0.05);
+          mark.classList.toggle('has-note', t >= E.doneClick.at + 0.05);
+          button.hidden = !(t >= E.select.at + E.select.dur + 0.1 && t < E.highlightClick.at + 0.05);
+          popover.hidden = !(t >= E.highlightClick.at + 0.05 && t < E.doneClick.at + 0.05);
+          noteBox.value = typed(E.typeNote, t);
+          noteBox.classList.toggle('st-focus', t >= E.highlightClick.at);
+
+          const text = whyText(t);
+          answer.value = text;
+          // The box eases to its new height over 0.15 s, so the form below glides instead of jumping a line.
+          let sum = 0;
+          for (let k = 0; k < 8; k++) sum += parseFloat(heights.get(whyText(t - k * 0.02)) ?? measure(whyText(t - k * 0.02)));
+          answer.value = text;
+          answer.style.height = `${sum / 8}px`;
+          answer.classList.toggle('st-focus', t >= E.fieldClick.at + 0.05 && t < E.full.at);
+          why.textContent = t >= E.saved.at ? 'Saved' : t >= E.draftLands.at && t < E.fieldClick.at ? 'Updated' : '';
+
+          const composer = composerText(t);
+          typedBox.textContent = composer;
+          placeholder.style.display = composer ? 'none' : '';
+          for (const chip of chips) chip.state.textContent = t >= chip.done ? '✓' : '·';
+          $('#st-chat-title').textContent = t >= E.onePage.at + 0.4 ? 'Agent · new chat' : 'Agent';
+          $('#st-durl').textContent = t >= E.appOpen.at + 0.1 ? 'localhost:4747/applications/1' : 'localhost:4747';
+          form.scrollTop = t < E.full.at ? 0 : formScroll * gsap.parseEase('power3.inOut')(Math.min(1, (t - E.full.at) / E.full.dur));
+          applyCarets(t);
+        }
+
+        for (let t = 0; t <= timing.duration; t += 1 / 120) measure(whyText(t));
+        measure(whyText(timing.duration));
+
+        // The text cursor: where the end of a text box's text sits, found once per text with a hidden copy of the box.
+        const mirror = document.createElement('div');
+        app.append(mirror);
+        const caretAfter = (box, text) => {
+          const cs = getComputedStyle(box);
+          const r = rectIn(box);
+          Object.assign(mirror.style, {
+            position: 'absolute', visibility: 'hidden', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`,
+            boxSizing: cs.boxSizing, padding: cs.padding, borderStyle: 'solid', borderWidth: cs.borderWidth, borderColor: 'transparent',
+            font: cs.font, letterSpacing: cs.letterSpacing, lineHeight: cs.lineHeight, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
+          });
+          mirror.textContent = text;
+          const end = document.createElement('span');
+          end.textContent = '\u200b';
+          mirror.append(end);
+          const m = rectIn(end);
+          return { x: m.left, y: m.top, h: m.height };
+        };
+        const answerCarets = new Map();
+        for (const text of heights.keys()) answerCarets.set(text, caretAfter(answer, text));
+        popover.hidden = false;
+        const noteCarets = new Map();
+        for (let n = 0; n <= E.typeNote.text.length; n++) noteCarets.set(E.typeNote.text.slice(0, n), caretAfter(noteBox, E.typeNote.text.slice(0, n)));
+        popover.hidden = true;
+        mirror.remove();
+        // The Candidate clicks right after the last word of the draft, where they will start deleting.
+        const draftEnd = answerCarets.get(draft);
+        const s0 = layout.dossier.w / pageWidth;
+        P.answerEnd = { x: layout.dossier.x + (draftEnd.x + 3) * s0, y: layout.dossier.y + barHeight + (draftEnd.y + draftEnd.h * 0.6) * s0 };
+
+        const caretBoxes = ['answer', 'note'].map(() => {
+          const caret = document.createElement('div');
+          caret.className = 'st-caret';
+          app.append(caret);
+          return caret;
+        });
+        const composerCaret = $('#st-composer-caret');
+        // A caret is solid while the text changes, then blinks every 0.5 s.
+        const since = (textAt, t) => {
+          const now = textAt(t);
+          let s = 0;
+          while (s < 1.2 && textAt(t - s - 1 / 60) === now) s += 1 / 60;
+          return s;
+        };
+        const blinkOn = (s) => s % 1.0 < 0.55;
+        const showCaret = (caret, pos, on) => {
+          caret.style.opacity = on ? '1' : '0';
+          if (on) Object.assign(caret.style, { left: `${pos.x}px`, top: `${pos.y}px`, height: `${pos.h}px` });
+        };
+        const noteText = (t) => typed(E.typeNote, t);
+        const composerText = (t) => t < E.sendClick.at + 0.05 ? typed(E.typeFound, t) + (t >= E.paste.at ? 'jobs.example.com/acme/product-engineer' : '')
+          : t < E.send2Click.at + 0.05 ? typed(E.typeDraft, t) : '';
+        function applyCarets(t) {
+          const editing = t >= E.fieldClick.at + 0.05 && t < E.full.at;
+          showCaret(caretBoxes[0], answerCarets.get(whyText(t)), editing && blinkOn(since(whyText, t)));
+          const noting = t >= E.highlightClick.at + 0.05 && t < E.doneClick.at + 0.05;
+          showCaret(caretBoxes[1], noteCarets.get(noteText(t)), noting && blinkOn(since(noteText, t)));
+          const composing = (t >= E.composerClick.at + 0.05 && t < E.sendClick.at + 0.05) || (t >= E.composer2Click.at + 0.05 && t < E.send2Click.at + 0.05);
+          composerCaret.style.opacity = composing && blinkOn(since(composerText, t)) ? '1' : '0';
+          // Before any text the caret sits at the start, ahead of the placeholder.
+          if (composerText(t)) typedBox.after(composerCaret);
+          else placeholder.before(composerCaret);
+        }
+
+        // ---------- Motion ----------
+        const tl = gsap.timeline({ paused: true });
+        const state = { t: 0 };
+        tl.fromTo(state, { t: 0 }, { t: timing.duration, duration: timing.duration, ease: 'none', onUpdate: () => apply(state.t) }, 0);
+
+        // The camera frames a box of the stage; the stage is 1600×900.
+        const view = (x, y, w, h) => {
+          const z = Math.min(1600 / w, 900 / h);
+          return { x: 800 - (x + w / 2) * z, y: 450 - (y + h / 2) * z, scale: z };
+        };
+        const wide = { x: 0, y: 0, scale: 1 };
+        let camNow = wide;
+        const camera = (to, at, dur, ease = 'power2.inOut') => {
+          tl.fromTo(cam, { ...camNow }, { ...to, duration: dur, ease, immediateRender: false }, at);
+          camNow = to;
+        };
+        gsap.set(cam, { transformOrigin: '0 0', ...wide });
+
+        // The cursor travels on a gentle curve: x and y ease differently. Points are where its tip lands.
+        const tip = { x: 40 * 4 / 28, y: 40 * 2 / 28 };
+        const atTip = (point) => ({ x: point.x - tip.x, y: point.y - tip.y });
+        let cursorNow = { x: 1700, y: 980 };
+        gsap.set(cursor, { x: cursorNow.x, y: cursorNow.y, scale: 1, transformOrigin: `${tip.x}px ${tip.y}px` });
+        const move = (point, at, dur) => {
+          const to = atTip(point);
+          tl.fromTo(cursor, { x: cursorNow.x }, { x: to.x, duration: dur, ease: 'power2.inOut', immediateRender: false }, at);
+          tl.fromTo(cursor, { y: cursorNow.y }, { y: to.y, duration: dur, ease: 'sine.inOut', immediateRender: false }, at);
+          cursorNow = to;
+        };
+        const press = (at) => {
+          tl.fromTo(cursor, { scale: 1 }, { scale: 0.84, duration: 0.07, ease: 'power2.out', immediateRender: false }, at);
+          tl.fromTo(cursor, { scale: 0.84 }, { scale: 1, duration: 0.22, ease: 'back.out(3)', immediateRender: false }, at + 0.08);
+        };
+        // A window answers a click by springing forward.
+        let front = 10;
+        const raise = (el, at) => {
+          tl.set(el, { zIndex: ++front }, at);
+          tl.fromTo(el, { scale: 1 }, { scale: 1.025, duration: 0.1, ease: 'power2.out', immediateRender: false }, at);
+          tl.fromTo(el, { scale: 1.025 }, { scale: 1, duration: 0.45, ease: 'back.out(2.5)', immediateRender: false }, at + 0.1);
+        };
+        // A field the Agent just filled pings once: a ring grows out of its border and fades.
+        const ping = (el, when) => {
+          tl.fromTo(el, { boxShadow: '0 0 0 0px rgb(10 10 10 / 0.85)' },
+            { boxShadow: '0 0 0 8px rgb(10 10 10 / 0)', duration: 0.6, ease: 'power2.out', immediateRender: false }, when);
+        };
+
+        // A chat message springs up into place.
+        const appear = (selector, at) => {
+          tl.fromTo(selector, { opacity: 0, y: 16, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.7)' }, at);
+        };
+        // A caption is the Candidate thinking out loud, so it pops out of the cursor. Captions are placed after the
+        // motion is built, where the cursor is on screen at that moment.
+        const captions = [];
+        const caption = (event) => captions.push(event);
+        const stage = $('#st-stage');
+        const onStage = (r) => {
+          const box = stage.getBoundingClientRect();
+          const k = box.width / 1600;
+          return { left: (r.left - box.left) / k, top: (r.top - box.top) / k, right: (r.right - box.left) / k, bottom: (r.bottom - box.top) / k };
+        };
+        const placeCaptions = () => {
+          for (const event of captions) {
+            tl.seek(event.at);
+            const c = onStage(cursor.getBoundingClientRect());
+            const tip = { x: c.left + (c.right - c.left) * 4 / 28, y: c.top + (c.bottom - c.top) * 2 / 28 };
+            const bubble = document.createElement('div');
+            bubble.className = 'st-bubble';
+            bubble.textContent = event.text;
+            $('#st-captions').append(bubble);
+            const w = bubble.offsetWidth;
+            const h = bubble.offsetHeight;
+            // Up and to the right of the cursor; to the left near the right edge; below it near the top.
+            const left = tip.x + 26 + w > 1580 ? tip.x - 18 - w : tip.x + 26;
+            const top = tip.y - 22 - h < 20 ? tip.y + 46 : tip.y - 22 - h;
+            bubble.style.left = `${left}px`;
+            bubble.style.top = `${top}px`;
+            bubble.style.transformOrigin = `${left < tip.x ? '100%' : '0'} ${top > tip.y ? '0' : '100%'}`;
+            tl.fromTo(bubble, { opacity: 0, y: top > tip.y ? -12 : 12, scale: 0.6, filter: 'blur(0px)' },
+              { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.8)' }, event.at);
+            tl.to(bubble, { opacity: 0, y: -8, filter: 'blur(4px)', duration: 0.22, ease: 'power2.in' }, event.at + event.dur - 0.22);
+          }
+        };
+        // Where an element's centre is in the camera's world at a moment, for clicks on things that move or grow.
+        const centerAt = (el, t) => {
+          tl.seek(t);
+          const box = cam.getBoundingClientRect();
+          const k = box.width / 1600;
+          const r = el.getBoundingClientRect();
+          return { x: (r.left + r.width / 2 - box.left) / k, y: (r.top + r.height / 2 - box.top) / k };
+        };
+
+        // 1. The problem: one job, four windows, landing one after another.
+        const order = [['posting', windows.posting], ['files', windows.files], ['oldChat', chat], ['form', windows.form]];
+        gsap.set(chat, { width: layout.oldChat.w, height: layout.oldChat.h });
+        order.forEach(([name, el], i) => {
+          el.style.zIndex = String(++front);
+          gsap.set(el, { opacity: 0 });
+          const { x, y } = layout[name];
+          tl.fromTo(el, { x: x + (x < 600 ? -80 : 80), y: y + 90, scale: 0.88 },
+            { x, y, scale: 1, duration: 0.75, ease: 'back.out(1.4)' }, 0.05 + i * 0.1);
+          tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power1.out', immediateRender: false }, 0.05 + i * 0.1);
+        });
+        gsap.set(dwin, { x: layout.dossier.x, y: layout.dossier.y, width: layout.dossier.w, height: layout.dossier.h, opacity: 0 });
+        cursor.style.zIndex = '1000';
+        move({ x: layout.form.x + 300, y: layout.form.y + 300 }, E.cursorIn.at, E.cursorIn.dur);
+        caption(E.capWhy);
+        move({ x: layout.files.x + 230, y: layout.files.y + 160 }, E.filesMove.at, E.filesMove.dur);
+        press(E.filesClick.at);
+        raise(windows.files, E.filesClick.at + 0.05);
+        caption(E.capResume);
+        // The hovered file's row lights up behind its name, following the cursor down the list.
+        const rowOn = $('#st-row-on');
+        const list = $('.st-files', windows.files);
+        const rows = $$('li', list).map((li) => ({ x: list.offsetLeft + li.offsetLeft, y: list.offsetTop + li.offsetTop, w: li.offsetWidth, h: li.offsetHeight }));
+        gsap.set(rowOn, { left: rows[0].x, top: 0, width: rows[0].w, height: rows[0].h, opacity: 0 });
+        [2, 3, 4].forEach((row, i) => {
+          const when = E.rows.at + i * E.rows.gap;
+          move({ x: layout.files.x + rows[row].x + 190, y: layout.files.y + rows[row].y + rows[row].h / 2 }, when, 0.25);
+          if (i === 0) tl.fromTo(rowOn, { opacity: 0, y: rows[row].y }, { opacity: 1, y: rows[row].y, duration: 0.12, immediateRender: false }, when + 0.15);
+          else tl.fromTo(rowOn, { y: rows[row - 1].y }, { y: rows[row].y, duration: 0.14, ease: 'power2.out', immediateRender: false }, when + 0.15);
+        });
+        tl.to(rowOn, { opacity: 0, duration: 0.15 }, E.rows.at + 3 * E.rows.gap + 0.2);
+        move({ x: layout.oldChat.x + 220, y: layout.oldChat.y + 250 }, E.chatMove.at, E.chatMove.dur);
+        press(E.chatClick.at);
+        raise(chat, E.chatClick.at + 0.05);
+        tl.fromTo('#st-old-list', { y: 0 }, { y: 120, duration: 2.2, ease: 'power2.inOut' }, E.chatClick.at + 0.1);
+        caption(E.capChat);
+
+        // 2. One page instead: the old windows fly off, the chat moves left, Dossier lands beside it.
+        const out = E.onePage.at;
+        Object.values(windows).forEach((el, i) => {
+          tl.to(el, { x: '+=340', y: '+=140', scale: 0.6, opacity: 0, filter: 'blur(10px)', duration: 0.45, ease: 'power3.in' }, out + i * 0.04);
+        });
+        tl.to('#st-old-msgs', { opacity: 0, duration: 0.2 }, out);
+        tl.fromTo(chat, { x: layout.oldChat.x, y: layout.oldChat.y, width: layout.oldChat.w, height: layout.oldChat.h },
+          { x: layout.chat.x, y: layout.chat.y, width: layout.chat.w, height: layout.chat.h, duration: 0.8, ease: 'power3.inOut', immediateRender: false }, out);
+        tl.set(dwin, { zIndex: ++front }, out);
+        tl.fromTo(dwin, { y: layout.dossier.y + 60, scale: 0.92, opacity: 0 },
+          { y: layout.dossier.y, scale: 1, opacity: 1, duration: 0.8, ease: 'back.out(1.5)', immediateRender: false }, out + 0.3);
+        gsap.set(app, { opacity: 0 });
+        $$('#st-msgs > .st-msg').forEach((el) => gsap.set(el, { opacity: 0 }));
+        caption(E.capOnePage);
+        move({ x: 200, y: 822 }, E.composerMove.at, E.composerMove.dur);
+        press(E.composerClick.at);
+        move(centerAt($('.st-send'), E.sendMove.at), E.sendMove.at, E.sendMove.dur);
+        press(E.sendClick.at);
+        appear('#st-m-found', E.sendClick.at + 0.05);
+        move({ x: 470, y: 690 }, E.sendClick.at + 0.25, 0.5);
+
+        // 3. The Agent fills the page while it works.
+        appear('#st-m-reading', E.reading.at);
+        appear('#st-t-add', E.addApp.at);
+        tl.to(home, { opacity: 0, filter: 'blur(8px)', duration: 0.18, ease: 'power2.in' }, E.appOpen.at);
+        tl.fromTo(app, { opacity: 0, filter: 'blur(8px)' }, { opacity: 1, filter: 'blur(0px)', duration: 0.25, ease: 'power2.out', immediateRender: false }, E.appOpen.at + 0.12);
+        appear('#st-t-answers', E.setAnswers.at);
+        fills.forEach((f) => ping(f.control, f.at));
+        appear('#st-t-summary', E.setSummary.at);
+        move(P.summaryTab, E.summaryMove.at, E.summaryMove.dur);
+        press(E.summaryClick.at);
+        tl.fromTo($('[data-pane="summary"] .markdown', app), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, E.summaryClick.at + 0.05);
+        appear('#st-t-note', E.addNote.at);
+        move(P.notesTab, E.notesMove.at, E.notesMove.dur);
+        press(E.notesClick.at);
+        tl.fromTo($('.note', app), { opacity: 0, y: 18, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.6)' }, E.notesClick.at + 0.05);
+        appear('#st-m-fits', E.fits.at);
+        caption(E.capRead);
+
+        // 4. The Candidate highlights what matters to them and says why.
+        move(P.postingTab, E.postingMove.at, E.postingMove.dur);
+        press(E.postingClick.at);
+        camera(view(P.column.x - 10, P.column.y + 95, 820, 820 * 9 / 16), E.camPosting.at, E.camPosting.dur);
+        move(P.wordStart, E.quoteMove.at, E.quoteMove.dur);
+        caption(E.capOldJob);
+        press(E.select.at - 0.05);
+        P.wordEnds.forEach((point, i) => {
+          const step = E.select.dur / words.length;
+          const from = atTip(i === 0 ? P.wordStart : P.wordEnds[i - 1]);
+          const to = atTip(point);
+          tl.fromTo(cursor, { x: from.x, y: from.y }, { x: to.x, y: to.y, duration: step, ease: 'none', immediateRender: false }, E.select.at + i * step);
+        });
+        cursorNow = atTip(P.wordEnds[P.wordEnds.length - 1]);
+        tl.fromTo(button, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, E.select.at + E.select.dur + 0.1);
+        move(P.button, E.buttonMove.at, E.buttonMove.dur);
+        press(E.highlightClick.at);
+        move(P.noteRest, E.highlightClick.at + 0.2, 0.35);
+        tl.fromTo(popover, { opacity: 0, y: -6, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'back.out(1.8)' }, E.highlightClick.at + 0.05);
+        move(P.done, E.doneMove.at, E.doneMove.dur);
+        press(E.doneClick.at);
+
+        // 5. The Agent drafts an Answer from the Highlight; the camera moves to the chat while the Candidate types.
+        camera(view(0, 360, 960, 540), E.camChat.at, E.camChat.dur);
+        move({ x: 200, y: 822 }, E.composer2Move.at, E.composer2Move.dur);
+        press(E.composer2Click.at);
+        move(centerAt($('.st-send'), E.send2Move.at), E.send2Move.at, E.send2Move.dur);
+        press(E.send2Click.at);
+        appear('#st-m-draft', E.send2Click.at + 0.05);
+        camera(wide, E.camWide2.at, E.camWide2.dur);
+        move({ x: 470, y: 690 }, E.send2Click.at + 0.25, 0.5);
+        appear('#st-t-get', E.getApp.at);
+        appear('#st-t-set', E.setDraft.at);
+        ping(answer, E.draftLands.at);
+        appear('#st-m-drafted', E.drafted.at);
+        move(at(answer, 0.62, 0.35), E.draftLands.at, 0.5);
+        caption(E.capNote);
+
+        // 6. The Candidate makes it theirs.
+        camera(view(fieldRect.x + fieldRect.w / 2 - 470, fieldRect.y + fieldRect.h / 2 - 264, 940, 528), E.camField.at, E.camField.dur);
+        move(P.answerEnd, E.fieldMove.at, E.fieldMove.dur);
+        press(E.fieldClick.at);
+        caption(E.capMyWay);
+
+        // 7. Everything for this job on one page: the window takes the whole stage.
+        camera(wide, E.full.at, E.full.dur, 'power3.inOut');
+        tl.to(chat, { x: -520, opacity: 0, duration: E.full.dur * 0.9, ease: 'power3.inOut' }, E.full.at);
+        const fullFrom = { x: layout.dossier.x, w: layout.dossier.w };
+        const resize = { p: 0 };
+        tl.fromTo(resize, { p: 0 }, {
+          p: 1, duration: E.full.dur, ease: 'power3.inOut', immediateRender: false,
+          onUpdate: () => {
+            const w = fullFrom.w + (layout.full.w - fullFrom.w) * resize.p;
+            const s = w / pageWidth;
+            gsap.set(dwin, { x: fullFrom.x + (layout.full.x - fullFrom.x) * resize.p, width: w });
+            gsap.set(dscale, { scale: s, height: (layout.dossier.h - barHeight) / s });
+          },
+        }, E.full.at);
+        move(P.resume, E.full.at, E.full.dur);
+        caption(E.capSamePage);
+
+        // 8. Into the end card: the page fades to black, which the end card closes into the dot of Dossier's i.
+        tl.fromTo('#st-black', { opacity: 0 }, { opacity: 1, duration: E.fadeOut.dur, ease: 'power2.in' }, E.fadeOut.at);
+        tl.to({}, { duration: 0.01 }, timing.duration - 0.01);
+
+        gsap.set(dscale, { scale: layout.dossier.w / pageWidth, height: (layout.dossier.h - barHeight) / (layout.dossier.w / pageWidth) });
+        placeCaptions();
+        tl.seek(0);
+        apply(0);
+        window.__timelines['story'] = tl;
+      }
+
+      document.fonts.ready.then(build);
+    })();
+  </script>
+</template>

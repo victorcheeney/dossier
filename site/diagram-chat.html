@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Dossier works</title>
+<style>
+@font-face { font-family: 'Inter'; font-weight: 400 700; font-display: swap; src: url(/fonts/inter-latin.woff2) format('woff2'); }
+@font-face { font-family: 'Instrument Serif'; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-latin.woff2) format('woff2'); }
+
+:root {
+  --ink: #0a0a0a; --muted: #6b6b6b; --rule: #e5e5e5; --card: #f8f8f8;
+  --hl: #fff1a6; --hl-strong: #ffe36e; --bar: #dcdcdc;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Inter', system-ui, sans-serif; color: var(--ink); background: #fff;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.caption { font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: .04em; }
+
+.frame { width: min(560px, 100%); aspect-ratio: 560 / 460; position: relative; }
+.stage { position: absolute; left: 0; top: 0; width: 560px; height: 460px; transform-origin: 0 0; }
+.stage * { position: absolute; }
+.stage .flow, .stage .flow *, .stage .chip * { position: relative; }
+
+.logo { display: block; background: currentColor; -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; }
+
+.win { background: #fff; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 12px 32px -12px rgba(0,0,0,.12); }
+.bar { left: 0; right: 0; top: 0; height: 34px; border-bottom: 1px solid var(--rule); background: var(--card); }
+.dots { left: 12px; top: 13px; width: 34px; height: 8px; }
+.dots i { position: absolute; top: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--rule); }
+.dots i:nth-child(2) { left: 11px; } .dots i:nth-child(3) { left: 22px; }
+.tag { font: 500 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.mcp { font: 600 8px/1 var(--mono); letter-spacing: .1em; color: var(--muted); border: 1px solid var(--rule); background: #fff; border-radius: 4px; padding: 2px 4px; }
+
+/* Chat */
+.chat { left: 0; top: 0; width: 340px; height: 252px; }
+.ai-head { left: 56px; top: 9px; height: 16px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.ai-head .or { color: var(--muted); font-weight: 400; }
+.ai-head .codex { color: var(--muted); font-weight: 500; }
+.chat .bar .tag { right: 14px; top: 13px; }
+
+.you-msg { right: 14px; top: 42px; display: flex; align-items: center; gap: 8px; }
+.you-msg .who { font: 500 9px/1 var(--mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.bubble { background: var(--ink); color: #fff; font-size: 11.5px; padding: 7px 11px; border-radius: 12px 12px 3px 12px; white-space: nowrap; min-width: 24px; min-height: 28px; }
+.row { left: 14px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.row .t { font-size: 11px; color: var(--muted); }
+.spark { width: 12px; height: 12px; color: #d97757; flex: none; }
+.chip { font: 500 10px/1 var(--mono); color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 4px 7px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.chip .logo { width: 10px; height: 10px; flex: none; }
+.chip .dmark { width: 9px; height: 9px; border: 1.5px solid var(--ink); border-radius: 2px; flex: none; }
+.r0 { top: 78px; } .r1 { top: 102px; } .r2 { top: 126px; } .r3 { top: 150px; } .r4 { top: 174px; }
+.input { left: 14px; right: 14px; top: 204px; height: 36px; border: 1px solid var(--rule); border-radius: 10px; }
+.input span { left: 12px; top: 10px; font-size: 11.5px; color: #a3a3a3; }
+
+/* Sources */
+.sources { left: 408px; top: 4px; width: 150px; height: 170px; }
+.sources > .tag { left: 0; top: 0; }
+.src { left: 0; width: 150px; height: 40px; }
+.src .tile { left: 0; top: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--rule); background: #fff; }
+.src .halo { left: -5px; top: -5px; width: 50px; height: 50px; border-radius: 14px; background: var(--hl); opacity: 0; }
+.src .logo { left: 11px; top: 11px; width: 18px; height: 18px; color: var(--ink); opacity: .3; }
+.src .name { left: 52px; top: 13px; font-size: 11px; font-weight: 500; color: var(--muted); }
+
+/* Wiring: every connection of Your AI, dotted at rest, ink while a call is on it */
+.wires { left: 0; top: 0; overflow: visible; }
+.wires path { fill: none; stroke-width: 1; }
+.wires .rest { stroke: #d4d4d4; stroke-dasharray: 2 3; }
+.wires .busy { stroke: var(--ink); opacity: 0; }
+.wire-tag { transform: translate(-50%, -50%); }
+.s1 { top: 20px; } .s2 { top: 72px; } .s3 { top: 124px; }
+
+/* Dossier */
+.dos { left: 168px; top: 206px; width: 392px; height: 254px; }
+.word { left: 14px; top: 12px; font: 600 10px/1 'Inter', sans-serif; letter-spacing: .28em; }
+.dos .bar .title { left: 104px; top: 7px; font: 400 17px/1.1 'Instrument Serif', serif; white-space: nowrap; }
+.dos .tag.live { right: 14px; top: 13px; display: flex; gap: 5px; align-items: center; }
+.dos .tag.live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+.col { top: 34px; width: 130px; bottom: 0; }
+.col .wash { inset: 0; background: var(--card); opacity: 0; }
+.col .tag { left: 12px; top: 13px; }
+.c-post { left: 0; } .c-form { left: 130px; border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); } .c-res { left: 260px; }
+
+.ln { left: 12px; height: 5px; border-radius: 3px; background: var(--bar); transform-origin: 0 50%; }
+.hl { left: 8px; height: 13px; border-radius: 3px; background: var(--hl); transform-origin: 0 50%; transform: scaleX(0); }
+.note { left: 22px; top: 122px; background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; font-size: 10px; white-space: nowrap; box-shadow: 0 6px 16px -8px rgba(0,0,0,.25); display: flex; gap: 5px; align-items: center; }
+.note::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--hl-strong); }
+
+.f-label { left: 12px; font-size: 9.5px; color: var(--muted); }
+.f-box { left: 12px; width: 106px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
+.caret { width: 1.5px; height: 10px; background: var(--ink); opacity: 0; }
+
+.paper { left: 12px; top: 32px; width: 106px; height: 182px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
+.paper .ln { left: 9px; height: 4px; }
+.paper .h { height: 7px; background: var(--ink); }
+
+/* Moving parts */
+.ghost { left: 0; top: 0; z-index: 5; opacity: 0; will-change: transform, opacity; box-shadow: 0 6px 18px -6px rgba(0,0,0,.25); }
+.ghost.result { background: var(--card); color: var(--muted); }
+.ghost.result::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.ghost.result.yellow { background: var(--hl); border-color: var(--hl-strong); color: var(--ink); }
+.ghost.result.yellow::before { background: var(--hl-strong); }
+.cursor { left: 0; top: 0; z-index: 6; opacity: 0; will-change: transform, opacity; }
+.cursor svg { left: 0; top: 0; }
+.cursor .who { left: 13px; top: 15px; background: var(--ink); color: #fff; font: 600 9px/1 var(--mono); letter-spacing: .08em; padding: 3px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="frame" id="frame" role="img" aria-label="You paste a job posting link into a chat with Claude or Codex. The AI fetches the posting from Greenhouse, then calls Dossier's MCP tools read_form_fields and add_application, and the application appears on the Dossier page. You highlight a passage and add a note. The AI calls get_application to read it, searches your pull requests through the GitHub MCP server and your notes through the Notion MCP server, then calls set_answer and set_resume. The answer and résumé appear on the page, where you edit them.">
+<div class="stage" id="stage">
+  <svg class="wires" id="wires" width="560" height="460" viewBox="0 0 560 460" aria-hidden="true"></svg>
+
+  <!-- Chat window -->
+  <div class="win chat" id="chat">
+    <div class="bar">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="ai-head flow" style="position:absolute">
+        <span class="logo" id="aiLogo" style="--src:url(/media/logos/claude.svg);width:15px;height:15px;color:#d97757"></span>
+        <span>Claude</span>
+        <span class="or">or</span>
+        <span class="logo" style="--src:url(/media/logos/openai.svg);width:13px;height:13px;color:var(--muted)"></span>
+        <span class="codex">Codex</span>
+      </div>
+      <div class="tag">Your AI</div>
+    </div>
+
+    <div class="you-msg flow" id="youMsg" style="position:absolute">
+      <span class="who">You</span>
+      <span class="bubble" id="bubble"></span>
+    </div>
+
+    <div class="row r0 flow" id="r0" style="position:absolute">
+      <span class="logo spark" style="--src:url(/media/logos/claude.svg)"></span>
+      <span class="chip" id="k0"><i class="logo" style="--src:url(/media/logos/greenhouse.svg)"></i>fetch</span>
+      <span class="t" id="r0t">the posting</span>
+    </div>
+    <div class="row r1 flow" id="r1" style="position:absolute">
+      <span class="logo spark" style="--src:url(/media/logos/claude.svg)"></span>
+      <span class="chip" id="k1"><i class="dmark"></i>read_form_fields</span>
+      <span class="chip" id="k2"><i class="dmark"></i>add_application</span>
+    </div>
+    <div class="row r2 flow" id="r2" style="position:absolute">
+      <span class="logo spark" style="--src:url(/media/logos/claude.svg)"></span>
+      <span class="chip" id="k3"><i class="dmark"></i>get_application</span>
+      <span class="t" id="r2t">your note</span>
+    </div>
+    <div class="row r3 flow" id="r3" style="position:absolute">
+      <span class="logo spark" style="--src:url(/media/logos/claude.svg)"></span>
+      <span class="chip" id="k6"><i class="logo" style="--src:url(/media/logos/github.svg)"></i>search_pull_requests</span>
+      <span class="chip" id="k7"><i class="logo" style="--src:url(/media/logos/notion.svg)"></i>notion-search</span>
+    </div>
+    <div class="row r4 flow" id="r4" style="position:absolute">
+      <span class="logo spark" style="--src:url(/media/logos/claude.svg)"></span>
+      <span class="chip" id="k4"><i class="dmark"></i>set_answer</span>
+      <span class="chip" id="k5"><i class="dmark"></i>set_resume</span>
+      <span class="t" id="r4t">Check the page.</span>
+    </div>
+
+    <div class="input"><span>Message…</span></div>
+  </div>
+
+  <!-- Sources -->
+  <div class="sources">
+    <div class="tag">Sources</div>
+    <div class="src s1" id="s1"><div class="halo"></div><div class="tile"></div><span class="logo" style="--src:url(/media/logos/greenhouse.svg)"></span><span class="name">Greenhouse</span></div>
+    <div class="src s2" id="s2"><div class="halo"></div><div class="tile"></div><span class="logo" style="--src:url(/media/logos/github.svg)"></span><span class="name">GitHub</span></div>
+    <div class="src s3" id="s3"><div class="halo"></div><div class="tile"></div><span class="logo" style="--src:url(/media/logos/notion.svg)"></span><span class="name">Notion</span></div>
+  </div>
+
+  <!-- Dossier window -->
+  <div class="win dos" id="dos">
+    <div class="bar">
+      <div class="word">DOSSIER</div>
+      <div class="title" id="title">Acme · Senior Engineer</div>
+      <div class="tag live">Live</div>
+    </div>
+
+    <div class="col c-post" id="cPost">
+      <div class="wash"></div>
+      <div class="tag">Posting</div>
+      <div class="hl" id="hl" style="top:69px;width:104px"></div>
+    </div>
+
+    <div class="col c-form" id="cForm">
+      <div class="wash"></div>
+      <div class="tag">Form</div>
+      <div class="f-label" style="top:30px">Name</div>
+      <div class="f-box" style="top:44px;height:20px"></div>
+      <div class="f-label" style="top:74px">Why Acme?</div>
+      <div class="f-box" id="answer" style="top:88px;height:72px"></div>
+      <div class="f-label" style="top:172px">LinkedIn</div>
+      <div class="f-box" style="top:186px;height:20px"></div>
+    </div>
+
+    <div class="col c-res" id="cRes">
+      <div class="wash"></div>
+      <div class="tag">Résumé</div>
+      <div class="paper" id="paper"></div>
+    </div>
+
+    <div class="note" id="note">Lead with this</div>
+  </div>
+
+  <div class="cursor" id="cursor">
+    <svg width="14" height="18" viewBox="0 0 14 18"><path d="M1 1v14l3.6-3.4 2.6 5.6 2.3-1-2.6-5.5H12z" fill="#0a0a0a" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    <span class="who">You</span>
+  </div>
+</div>
+</div>
+
+<script>
+const LOOP = 21;
+const STILL_AT = 19.8;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), frame = $('frame');
+const MESSAGE = 'Add this posting: greenhouse.io/acme/…';
+
+// Page content built from data, so line geometry lives in one place.
+const postLines = [86, 70, 92, 96, 64, 88, 78, 90, 58, 82, 72].map((w, i) => mk($('cPost'), 'ln', { top: 37 + i * 12 + 'px', width: w + 'px' }));
+const answerLines = [84, 78, 86, 52].map((w, i) => mk($('answer'), 'ln', { left: '8px', top: 10 + i * 13 + 'px', width: w + 'px', height: '4px' }));
+const caret = mk($('answer'), 'caret', { top: '33px' });
+const resumeLines = [
+  ['h', 54, 12], ['', 70, 24], ['s', 40, 44], ['', 82, 56], ['', 76, 66], ['', 84, 76], ['', 60, 86],
+  ['s', 40, 104], ['', 80, 116], ['', 72, 126], ['', 86, 136], ['', 66, 146], ['', 78, 160], ['', 50, 170],
+].map(([kind, w, top]) => mk($('paper'), kind === 'h' ? 'ln h' : 'ln', { top: top + 'px', width: w + 'px', background: kind === 's' ? '#b5b5b5' : '' }));
+
+function mk(parent, cls, style) {
+  const el = document.createElement('div');
+  el.className = cls;
+  Object.assign(el.style, style);
+  parent.appendChild(el);
+  return el;
+}
+
+// Ghosts: copies of chat chips that fly out, and result pills that fly back.
+function ghostOf(chipId) {
+  const g = $(chipId).cloneNode(true);
+  g.removeAttribute('id');
+  g.classList.add('ghost');
+  stage.appendChild(g);
+  return g;
+}
+function result(text, yellow) {
+  const g = document.createElement('span');
+  g.className = 'chip ghost result' + (yellow ? ' yellow' : '');
+  g.textContent = text;
+  stage.appendChild(g);
+  return g;
+}
+
+// Timeline (seconds). Calls to sources and to Dossier get the same treatment:
+// a chip appears in the chat, lifts off and holds, travels its wire slowly,
+// holds on arrival so its name can be read, then fades as the result lands.
+const HOLD = .4, TRAVEL = 1.0, FADE = .2;
+const fl = a => { const land = a + HOLD + TRAVEL; return { a, land, ready: land + HOLD, gone: land + HOLD + FADE }; };
+const lit = f => [f.land - .3, f.land, f.ready + .5, f.ready + .9];
+const TIMES = {
+  type: [.35, 1.5],
+  fetch: { row: 1.6, out: fl(1.8), back: fl(3.7), text: 5.5 },
+  readForm: { row: 5.2, out: fl(5.4) },
+  addApp: { chip: 5.8, out: fl(6.0) },
+  highlight: { cursorIn: 8.1, reach: 8.6, drag: [8.7, 9.3], note: 9.3, cursorOut: 9.6 },
+  getApp: { row: 9.6, out: fl(9.8), back: fl(11.7), text: 13.5 },
+  github: { row: 12.4, out: fl(12.6), back: fl(14.5) },
+  notion: { chip: 12.8, out: fl(13.0), back: fl(14.9) },
+  setAnswer: { row: 16.0, out: fl(16.2) },
+  setResume: { chip: 16.5, out: fl(16.7), text: 18.8 },
+  edit: { cursorIn: 18.6, reach: 19.1, change: [19.2, 19.5], cursorOut: 20.0 },
+  fade: [20.1, 20.5],
+};
+['fetch', 'github', 'notion'].forEach(k => { TIMES[k].lit = lit(TIMES[k].out); });
+
+// Timing helpers
+const clamp = x => Math.min(1, Math.max(0, x));
+const p = (t, a, b) => clamp((t - a) / (b - a));
+const out = x => 1 - Math.pow(1 - x, 3);
+const inOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const pulse = (t, a, b, c, d) => out(p(t, a, b)) * (1 - p(t, c, d));
+const on = (t, a, len = .22) => out(p(t, a, a + len));
+
+function show(el, v, dy = 4) {
+  el.style.opacity = v;
+  el.style.transform = `translateY(${(1 - v) * dy}px)`;
+}
+
+// Geometry in stage coordinates (offsets ignore the stage scale and transforms).
+function box(el) {
+  let x = 0, y = 0, n = el;
+  while (n && n !== stage) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  return { x, y, w: el.offsetWidth, h: el.offsetHeight, cx: x + el.offsetWidth / 2, cy: y + el.offsetHeight / 2 };
+}
+
+// Connections from the chat window (Your AI) to each MCP server or source.
+// Each tag sits just above its wire, so a chip travelling the wire never hides it.
+const WIRES = {
+  web: { pts: [[340, 44], [408, 44]], tag: 'web', at: [374, 25] },
+  github: { pts: [[340, 96], [408, 96]], tag: 'MCP', at: [374, 77] },
+  notion: { pts: [[340, 148], [408, 148]], tag: 'MCP', at: [374, 129] },
+  dossier: { pts: [[84, 252], [84, 330], [168, 330]], tag: 'MCP', at: [126, 311] },
+};
+const svgNS = 'http://www.w3.org/2000/svg';
+Object.values(WIRES).forEach(w => {
+  const d = 'M' + w.pts.map(pt => pt.join(' ')).join(' L');
+  ['rest', 'busy'].forEach(cls => {
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', cls);
+    $('wires').appendChild(path);
+    if (cls === 'busy') w.busy = path;
+  });
+  const tag = document.createElement('span');
+  tag.className = 'mcp wire-tag';
+  tag.textContent = w.tag;
+  tag.style.left = w.at[0] + 'px';
+  tag.style.top = w.at[1] + 'px';
+  stage.appendChild(tag);
+});
+
+let G = {};
+function measure() {
+  const b = id => box($(id));
+  const hl = b('hl'), ans = b('answer'), paper = b('paper'), form = b('cForm'), post = b('cPost');
+  const T = TIMES;
+  // A flight follows its wire: chip → wire → target, or the reverse for a result.
+  const flight = (el, chip, target, time, wire, back = false) => {
+    const w = el.offsetWidth, h = el.offsetHeight, pts = WIRES[wire].pts;
+    let path;
+    if (wire === 'dossier') {
+      path = [[chip.cx, chip.cy], ...pts, [target.cx, target.cy]];
+    } else {
+      // Source calls leave their chat row sideways, turn onto the wire,
+      // and stop on the wire just short of the tile, never on top of it.
+      const y = pts[0][1], stopX = pts[1][0] - 4 - w / 2, elbowX = Math.min(324, stopX);
+      path = [[chip.cx, chip.cy], [elbowX, chip.cy], [elbowX, y], [stopX, y]];
+    }
+    return { el, w, h, wire, ...time, route: route(back ? path.reverse() : path) };
+  };
+  G = {
+    flights: [
+      flight(ghostOf('k0'), b('k0'), null, T.fetch.out, 'web'),
+      flight(result('posting'), b('k0'), null, T.fetch.back, 'web', true),
+      flight(ghostOf('k1'), b('k1'), { cx: form.cx, cy: form.y + 100 }, T.readForm.out, 'dossier'),
+      flight(ghostOf('k2'), b('k2'), { cx: post.cx, cy: post.y + 90 }, T.addApp.out, 'dossier'),
+      flight(ghostOf('k3'), b('k3'), { cx: hl.cx, cy: hl.cy }, T.getApp.out, 'dossier'),
+      flight(result('note', true), b('k3'), { cx: hl.cx, cy: hl.cy }, T.getApp.back, 'dossier', true),
+      flight(ghostOf('k6'), b('k6'), null, T.github.out, 'github'),
+      flight(result('PRs'), b('k6'), null, T.github.back, 'github', true),
+      flight(ghostOf('k7'), b('k7'), null, T.notion.out, 'notion'),
+      flight(result('notes'), b('k7'), null, T.notion.back, 'notion', true),
+      flight(ghostOf('k4'), b('k4'), { cx: ans.cx, cy: ans.cy }, T.setAnswer.out, 'dossier'),
+      flight(ghostOf('k5'), b('k5'), { cx: paper.cx, cy: paper.y + 70 }, T.setResume.out, 'dossier'),
+    ],
+    cursorKeys: [
+      [0, hl.x + 40, hl.y + 70],
+      [T.highlight.cursorIn, hl.x + 40, hl.y + 70],
+      [T.highlight.reach, hl.x + 4, hl.cy],
+      [T.highlight.drag[0], hl.x + 4, hl.cy],
+      [T.highlight.drag[1], hl.x + hl.w, hl.cy],
+      [T.edit.cursorIn, hl.x + hl.w, hl.cy],
+      [T.edit.cursorIn + .0001, ans.x + ans.w + 20, ans.y + 110],
+      [T.edit.reach, ans.x + 54, ans.y + 36],
+      [LOOP, ans.x + 54, ans.y + 36],
+    ],
+  };
+}
+
+function route(pts) {
+  const lens = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+  return { pts, lens, total: lens.reduce((a, b) => a + b, 0) };
+}
+function along(r, x) {
+  let d = inOut(x) * r.total;
+  for (let i = 0; i < r.lens.length; i++) {
+    if (d <= r.lens[i] || i === r.lens.length - 1) {
+      const k = r.lens[i] ? Math.min(1, d / r.lens[i]) : 1, [x0, y0] = r.pts[i], [x1, y1] = r.pts[i + 1];
+      return [x0 + (x1 - x0) * k, y0 + (y1 - y0) * k];
+    }
+    d -= r.lens[i];
+  }
+}
+
+function cursorAt(t) {
+  const k = G.cursorKeys;
+  for (let i = 1; i < k.length; i++) {
+    if (t <= k[i][0]) {
+      const [t0, x0, y0] = k[i - 1], [t1, x1, y1] = k[i];
+      const e = inOut(p(t, t0, t1));
+      return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e];
+    }
+  }
+  return k[k.length - 1].slice(1);
+}
+
+// A column washes grey when a Dossier call lands on it.
+const wash = (id, f) => [id, f.land - .1, f.land + .1, f.ready + .2, f.ready + .6];
+const WASHES = [
+  wash('cForm', TIMES.readForm.out), wash('cPost', TIMES.addApp.out),
+  wash('cForm', TIMES.setAnswer.out), wash('cRes', TIMES.setResume.out),
+];
+const SOURCES = [['s1', TIMES.fetch], ['s2', TIMES.github], ['s3', TIMES.notion]];
+
+let typed = -1;
+function render(t, still = false) {
+  const T = TIMES;
+  const fade = 1 - p(t, ...T.fade);
+
+  // Chat
+  show($('youMsg'), on(t, .15, .25) * fade);
+  const n = Math.round(p(t, ...T.type) * MESSAGE.length);
+  if (n !== typed) { $('bubble').textContent = MESSAGE.slice(0, n); typed = n; }
+  show($('r0'), on(t, T.fetch.row) * fade);
+  $('r0t').style.opacity = on(t, T.fetch.text);
+  show($('r1'), on(t, T.readForm.row) * fade);
+  $('k2').style.opacity = on(t, T.addApp.chip);
+  show($('r2'), on(t, T.getApp.row) * fade);
+  $('r2t').style.opacity = on(t, T.getApp.text);
+  show($('r3'), on(t, T.github.row) * fade);
+  $('k7').style.opacity = on(t, T.notion.chip);
+  show($('r4'), on(t, T.setAnswer.row) * fade);
+  $('k5').style.opacity = on(t, T.setResume.chip);
+  $('r4t').style.opacity = on(t, T.setResume.text);
+
+  // Sources light up while a call is on them, and stay a little darker once read.
+  SOURCES.forEach(([id, s]) => {
+    const lit = still ? 0 : pulse(t, ...s.lit);
+    const read = still ? 1 : on(t, s.lit[0], .4) * fade;
+    const el = $(id);
+    el.querySelector('.halo').style.opacity = lit;
+    el.querySelector('.logo').style.opacity = .3 + .4 * read + .3 * lit;
+    el.querySelector('.name').style.color = lit > .5 || still ? 'var(--ink)' : '';
+  });
+
+  // Dossier page
+  show($('title'), on(t, T.addApp.out.ready, .25) * fade, 3);
+  postLines.forEach((el, i) => show(el, on(t, T.addApp.out.ready + i * .04, .2) * fade, 3));
+  $('cForm').querySelectorAll('.f-label, .f-box').forEach((el, i) => show(el, on(t, T.readForm.out.ready + i * .05, .25) * fade, 3));
+  $('hl').style.transform = `scaleX(${inOut(p(t, ...T.highlight.drag))})`;
+  $('hl').style.opacity = fade;
+  $('hl').style.background = pulse(t, T.getApp.out.land - .1, T.getApp.out.land, T.getApp.out.ready, T.getApp.out.ready + .3) > .5 ? 'var(--hl-strong)' : '';
+  show($('note'), on(t, T.highlight.note, .25) * fade);
+  const shorter = 1 - .45 * inOut(p(t, ...T.edit.change));
+  answerLines.forEach((el, i) => {
+    const v = on(t, T.setAnswer.out.ready + i * .08, .2) * fade;
+    el.style.opacity = v;
+    el.style.transform = `scaleX(${v * (i === 2 ? shorter : 1)})`;
+  });
+  caret.style.left = 8 + 86 * shorter + 2 + 'px';
+  caret.style.opacity = t > T.edit.reach && t < T.edit.cursorOut && Math.floor(t * 4) % 2 === 0 ? fade : 0;
+  show($('paper'), on(t, T.setResume.out.ready - .05) * fade, 3);
+  resumeLines.forEach((el, i) => {
+    const v = on(t, T.setResume.out.ready + i * .035, .2) * fade;
+    el.style.opacity = v;
+    el.style.transform = `scaleX(${v})`;
+  });
+  ['cPost', 'cForm', 'cRes'].forEach(id => {
+    const w = WASHES.filter(r => r[0] === id).reduce((m, [, ...r]) => Math.max(m, still ? 0 : pulse(t, ...r)), 0);
+    $(id).querySelector('.wash').style.opacity = w;
+  });
+
+  // Calls fly out of the chat; results fly back into it.
+  const busy = {};
+  G.flights.forEach(f => {
+    busy[f.wire] = Math.max(busy[f.wire] || 0, still ? 0 : pulse(t, f.a + HOLD - .1, f.a + HOLD, f.ready, f.gone + .1));
+  });
+  Object.entries(WIRES).forEach(([k, w]) => { w.busy.style.opacity = busy[k] || 0; });
+  G.flights.forEach(f => {
+    if (still || t <= f.a || t >= f.gone) { f.el.style.opacity = 0; return; }
+    const [cx, cy] = along(f.route, p(t, f.a + HOLD, f.land));
+    f.el.style.opacity = out(p(t, f.a, f.a + .15)) * (1 - p(t, f.ready, f.gone));
+    f.el.style.transform = `translate(${cx - f.w / 2}px, ${cy - f.h / 2}px) `;
+  });
+
+  // Your cursor
+  const [x, y] = cursorAt(t);
+  const H = T.highlight, E = T.edit;
+  const vis = still ? 1 : on(t, H.cursorIn - .05, .25) * (1 - p(t, H.cursorOut, H.cursorOut + .3))
+    + on(t, E.cursorIn, .25) * (1 - p(t, E.cursorOut, E.cursorOut + .3));
+  const down = (t > H.drag[0] - .05 && t < H.drag[1]) || (t > E.reach && t < E.reach + .1) ? .88 : 1;
+  $('cursor').style.opacity = vis;
+  $('cursor').style.transform = `translate(${x}px, ${y}px) scale(${down})`;
+}
+
+function fit() { stage.style.transform = `scale(${frame.clientWidth / 560})`; }
+new ResizeObserver(fit).observe(frame);
+fit();
+
+document.fonts.ready.then(() => {
+  measure();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { render(STILL_AT, true); return; }
+  const t0 = performance.now();
+  const tick = now => { render(((now - t0) / 1000) % LOOP); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+});
+</script>
+</body>
+</html>
