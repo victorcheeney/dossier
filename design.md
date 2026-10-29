@@ -13,6 +13,10 @@ Dossier's look is adapted from the visual foundation of [victorc.dev](https://vi
 - **Résumé:** one template (`public/resume.css`): a US Letter page, Inter 9.6pt, the name in Instrument Serif, uppercase grey section rules, dates right-aligned. The right column shows the page itself, scaled to fit, with no viewer chrome; a dashed line marks the end of page 1 when it overflows.
 - **Motion:** transform and opacity only, short, and none with reduced motion.
 
+## Demo video
+
+- Move into highlighting as the “it actually read the posting” caption ends, with no idle hold between them. The video runs 42.5 seconds.
+
 ## Tokens
 
 | Token | Value |
